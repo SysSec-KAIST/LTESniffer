@@ -1,2 +1,3 @@
 # LTESniffer
-An Open-Source LTE DL/UL Data/Control Channel Eavesdropper
+LTESniffer: An Open-source LTE Downlink/Uplink Eavesdropper
+
