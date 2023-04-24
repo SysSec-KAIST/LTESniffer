@@ -91,7 +91,7 @@ sudo apt-get install libglib2.0-dev libudev-dev libcurl4-gnutls-dev libboost-all
 
 **Build LTESniffer from source:**
 ```bash
-git clone https://gitfront.io/r/hdtuanss/Bx2Uc67dBFGK/LTESniffer.git
+git clone https://github.com/SysSec-KAIST/LTESniffer.git
 cd LTESniffer
 mkdir build
 cd build
