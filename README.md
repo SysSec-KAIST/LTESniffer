@@ -8,7 +8,7 @@ It first decodes the Physical Downlink Control Channel (PDCCH) to obtain the Dow
 LTESniffer supports an API with three functions for security applications and research. Many LTE security research assumes
 a passive sniffer that can capture privacy-related packets on the air. However, non of the current open-source sniffers satisfy their requirements as they cannot decode protocol packets in PDSCH and PUSCH. We developed a proof-of-concept security API that supports three tasks that were proposed by previous works: 1) Identity mapping, 2) IMSI collecting, and 3) Capability profiling.
 
-Please refer to our paper for more details (to be updated..).
+Please refer to our paper for more details (to be updated...).
 ## Ethical Consideration
 
 The main purpose of LTESniffer is to support security and analysis research on the cellular network. Due to the collection of uplink-downlink user data, any use of LTESniffer must follow the local regulations on sniffing the LTE traffic. We are not responsible for any illegal purposes such as intentionally collecting user privacy-related information.
