@@ -181,6 +181,15 @@ We sincerely appreciate the [FALCON][falcon] and [SRS team][srsran] for making t
 ## BibTex
 Please refer to our [paper][paper] for more details.
 
+```bibtex
+@inproceedings{hoang:ltesniffer,
+  title = {{LTESniffer: An Open-source LTE Downlink/Uplink Eavesdropper}},
+  author = {Hoang, Dinh Tuan and Park, CheolJun and Son, Mincheol and Oh, Taekkyung and Bae, Sangwook and Ahn, Junho and Oh, BeomSeok and Kim, Yongdae},
+  booktitle = {16th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec '23)},
+  year = {2023}
+}
+```
+
 [falcon]: https://github.com/falkenber9/falcon
 [srsran]: https://github.com/srsran/srsRAN_4G
 [uhd]:    https://github.com/EttusResearch/uhd
