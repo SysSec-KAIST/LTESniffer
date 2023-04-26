@@ -168,10 +168,16 @@ The debug mode can be enabled by using option ``-d``. In this case, the debug me
 ### Output of LTESniffer
 
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.
-Downlink pcap file: ``sniffer_dl_mode.pcap``. Uplink pcap file: ``sniffer_ul_mode.pcap``. API pcap file: ``api_collector.pcap``.
+The name of downlink pcap file: ``sniffer_dl_mode.pcap``, uplink pcap file: ``sniffer_ul_mode.pcap``, and API pcap file: ``api_collector.pcap``.
 The pcap files are located in the same directory LTE Sniffer has been executed.
+To enable the WireShark to analyze the decoded packets correctly, please refer to the WireShark configuration guide [here][pcap]. There are also some examples of pcap files in the link.
 
 ## Application Note
+### Decoded traffic from LTESniffer
+LTESniffer can only obtain encrypted packets in most cases because it can’t know the cryptographic keys of users. However, encrypted packets are required in certain security research. Moreover, some packets are transferred in plaintext by design. For example, the following plain-text messages can be seen in the pcap files from LTESniffer:
+- System Information Blocks (SIBs), which are broadcast messages containing relevant information for UEs to access the cell tower.
+- Paging messages, which are broadcast messages to request UEs to establish communication with the network.
+- Messages at the beginning of the connection, before the encryption is activated between UEs and the network.
 ### Uplink sniffing mode
 When sniffing LTE uplink, LTESniffer requires USRP X310 because it needs to listen to two different frequencies at the same time, 1 for uplink and 1 for downlink. The main target of the uplink sniffing function is to decode uplink traffic from nearby smartphones. However, as LTESniffer needs to decode the downlink traffic to obtain uplink-downlink DCI messages, it also supports decoding downlink traffic at the same time. Nevertheless, the downlink sniffing function is limited to decoding messages which use transmission modes 1 and 2, since LTESniffer only has 1 antenna for downlink.
 ### Distance for uplink sniffing
@@ -194,3 +200,4 @@ Please refer to our [paper][paper] for more details.
 [srsran]: https://github.com/srsran/srsRAN_4G
 [uhd]:    https://github.com/EttusResearch/uhd
 [paper]:  https://syssec.kaist.ac.kr/pub/2023/wisec2023_tuan.pdf
+[pcap]:   pcap_file_example/README.md
