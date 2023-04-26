@@ -8,11 +8,12 @@ Some examples of pcap files that contain decoded traffic between srseNB and a te
 
 ## WireShark Configuration
 Please refer to the following pictures to configure WireShark:
+- Go to Edit -> Preferences -> Protocols -> DLT_USER
 <p align="center">
   <img src="WireShark_configuration_1.PNG" alt="WireShark Configuration 1">
 </p>
 
-
+- Go to Analyzer -> Enabled Protocols... -> Search for "LTE"
 <p align="center">
   <img src="WireShark_configuration_2.PNG" alt="WireShark Configuration 2">
 </p>
