@@ -9,6 +9,14 @@ LTESniffer supports an API with three functions for security applications and re
 a passive sniffer that can capture privacy-related packets on the air. However, non of the current open-source sniffers satisfy their requirements as they cannot decode protocol packets in PDSCH and PUSCH. We developed a proof-of-concept security API that supports three tasks that were proposed by previous works: 1) Identity mapping, 2) IMSI collecting, and 3) Capability profiling.
 
 Please refer to our [paper][paper] for more details.
+
+## What does LTESniffer capture?
+LTESniffer captures the LTE wireless packets between the base station and users. It supports capturing the traffic in both two directions, the downlink traffic from the cell tower to users; and the uplink traffic from nearby users to the cell tower.
+
+LTESniffer can only obtain encrypted packets in most cases because the traffic between the cell tower and users is mostly encrypted. However, some packets are transferred in plaintext by design. For example, the following plain-text messages can be seen in the pcap files from LTESniffer:
+- System Information Blocks (SIBs), which are broadcast messages containing relevant information for UEs to access the cell tower.
+- Paging messages, which are broadcast messages to request UEs to establish communication with the network.
+- Messages at the beginning of the connection, before the encryption is activated between UEs and the network.
 ## Ethical Consideration
 
 The main purpose of LTESniffer is to support security and analysis research on the cellular network. Due to the collection of uplink-downlink user data, any use of LTESniffer must follow the local regulations on sniffing the LTE traffic. We are not responsible for any illegal purposes such as intentionally collecting user privacy-related information.
@@ -169,19 +177,17 @@ The debug mode can be enabled by using option ``-d``. In this case, the debug me
 
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.
 The name of downlink pcap file: ``sniffer_dl_mode.pcap``, uplink pcap file: ``sniffer_ul_mode.pcap``, and API pcap file: ``api_collector.pcap``.
-The pcap files are located in the same directory LTE Sniffer has been executed.
+The pcap files are located in the same directory ``LTESniffer`` has been executed.
 To enable the WireShark to analyze the decoded packets correctly, please refer to the WireShark configuration guide [here][pcap]. There are also some examples of pcap files in the link.
 
 ## Application Note
-### Decoded traffic from LTESniffer
-LTESniffer can only obtain encrypted packets in most cases because it can’t know the cryptographic keys of users. However, encrypted packets are required in certain security research. Moreover, some packets are transferred in plaintext by design. For example, the following plain-text messages can be seen in the pcap files from LTESniffer:
-- System Information Blocks (SIBs), which are broadcast messages containing relevant information for UEs to access the cell tower.
-- Paging messages, which are broadcast messages to request UEs to establish communication with the network.
-- Messages at the beginning of the connection, before the encryption is activated between UEs and the network.
 ### Uplink sniffing mode
 When sniffing LTE uplink, LTESniffer requires USRP X310 because it needs to listen to two different frequencies at the same time, 1 for uplink and 1 for downlink. The main target of the uplink sniffing function is to decode uplink traffic from nearby smartphones. However, as LTESniffer needs to decode the downlink traffic to obtain uplink-downlink DCI messages, it also supports decoding downlink traffic at the same time. Nevertheless, the downlink sniffing function is limited to decoding messages which use transmission modes 1 and 2, since LTESniffer only has 1 antenna for downlink.
 ### Distance for uplink sniffing
 The effective range for sniffing uplink is limited in LTESniffer due to the capability of the RF front-end of the hardware (i.e. SDR). The uplink signal power from UE is significantly weaker compared to the downlink signal because UE is a handheld device that optimizes battery usage, while the eNB uses sufficient power to cover a large area. To successfully capture the uplink traffic, LTESniffer can increase the strength of the signal power by i) being physically close to the UE, or ii) improving the signal reception capability with specialized hardware, such as a directional antenna, dedicated RF front-end, and signal amplifier.
+## FAQ
+**Q:** Is it possible to capture and see the phone call content using LTESniffer? \
+**A:** No. LTE traffic including phone call traffic is encrypted, so you cannot use LTESniffer to know the content of phone calls of someone. Moreover, it is important to note that sniffing phone calls in the commercial network is illegal in most countries.
 ## Credits
 We sincerely appreciate the [FALCON][falcon] and [SRS team][srsran] for making their great softwares available.
 ## BibTex
