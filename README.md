@@ -11,7 +11,7 @@ a passive sniffer that can capture privacy-related packets on the air. However, 
 Please refer to our [paper][paper] for more details.
 
 ## What does LTESniffer capture?
-LTESniffer captures the LTE wireless packets between the base station and users. It supports capturing the traffic in both two directions, the downlink traffic from the cell tower to users; and the uplink traffic from nearby users to the cell tower.
+LTESniffer captures the LTE wireless packets between the cell tower and users. It supports capturing the traffic in both two directions, the downlink traffic from the cell tower to users; and the uplink traffic from nearby users to the cell tower.
 
 LTESniffer can only obtain encrypted packets in most cases because the traffic between the cell tower and users is mostly encrypted. However, some packets are transferred in plaintext by design. For example, the following plain-text messages can be seen in the pcap files from LTESniffer:
 - System Information Blocks (SIBs), which are broadcast messages containing relevant information for UEs to access the cell tower.
