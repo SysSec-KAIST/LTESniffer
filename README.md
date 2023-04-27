@@ -24,7 +24,7 @@ The main purpose of LTESniffer is to support security and analysis research on t
 ## Features
 LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][srsran] library. LTESniffer supports:
 - Real-time decoding LTE uplink-downlink control-data channels: PDCCH, PDSCH, PUSCH
-- LTE Advanced and LTE Advanced Pro
+- LTE Advanced and LTE Advanced Pro, up to 256QAM in both uplink and downlink
 - DCI formats: 0, 1A, 1, 1B, 1C, 2, 2A, 2B
 - Transmission modes: 1, 2, 3, 4
 - FDD only
