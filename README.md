@@ -35,7 +35,7 @@ LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][s
 
 ## Hardware and Software Requirement
 ### OS Requirement
-Recommend using Ubuntu 18.04
+Currently, LTESniffer works stablely on Ubuntu 18.04, other Ubuntu versions will be supported in the next release.
 
 ### Hardware Requirement
 Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores. Especially when the base station has many active users during the peak hour. LTESniffer was able to achieve real-time decoding when running on an Intel i7-9700K PC to decode traffic on a base station with 150 active users.
@@ -49,6 +49,7 @@ Currently, LTESniffer requires USRP X310 because it needs to synchronize with bo
 
 To sniff only downlink traffic from the base station, one can operate LTESniffer with USRP B210 which is connected to PC via a USB 3.0 port. Similarly, USRB B210 should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
 ## Installation
+**Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04.**
 
 **Dependencies**
 - **Important dependency**: [UHD][uhd] library version >= 4.0 must be installed in advance (recommend building from source). The following steps can be used on Ubuntu 18.04. Refer to UHD Manual for full installation guidance. 
