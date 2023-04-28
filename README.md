@@ -190,25 +190,28 @@ When sniffing LTE uplink, LTESniffer requires USRP X310 because it needs to list
 ### Distance for uplink sniffing
 The effective range for sniffing uplink is limited in LTESniffer due to the capability of the RF front-end of the hardware (i.e. SDR). The uplink signal power from UE is significantly weaker compared to the downlink signal because UE is a handheld device that optimizes battery usage, while the eNB uses sufficient power to cover a large area. To successfully capture the uplink traffic, LTESniffer can increase the strength of the signal power by i) being physically close to the UE, or ii) improving the signal reception capability with specialized hardware, such as a directional antenna, dedicated RF front-end, and signal amplifier.
 ### The information displayed on the terminal
-**Downlink Sniffing Mode**
-``Processed 1000/1000 subframes``: Number of subframes was processed by LTESniffer last 1 second. There are 1000 LTE subframes per second by design.
-``RNTI``: Radio Network Temporary Identifier of UEs. 
-``Table``: The maximum modulation scheme that is used by smartphones in downlink. LTESniffer supports up to 256QAM in the downlink. Refer to our [paper][paper] for more details.
-``Active``: Number of detected messages of RNTIs.
-``Success``: Number of successfully decoded messages over number of detected messages (``Active``).
-``New TX, ReTX, HARQ, Normal``: Statistic of new messages and retransmitted messages. This function is in development.
-``W_MIMO, W_pinfor, Other``: Number of messages with wrong radio configuration, only for debugging.
+**Downlink Sniffing Mode** 
 
-**Uplink Sniffing Mode**
-``Max Mod``: The maximum modulation scheme that is used by smartphones in uplink. It can be 16/64/256QAM depending on the support of smartphones and the configuration of the network. Refer to our [paper][paper] for more details.
-``SNR``: Signal-to-noise ratio (dB). Low SNR means the uplink signal quality from the smartphone is bad. One possible reason is the smartphone is far from the sniffer.
-``DL-UL_delay``: The average of time delay between downlink signal from the base station and uplink signal from the smartphone.
-``Other Info``: Information only for debugging.
+``Processed 1000/1000 subframes``: Number of subframes was processed by LTESniffer last 1 second. There are 1000 LTE subframes per second by design. \
+``RNTI``: Radio Network Temporary Identifier of UEs. \
+``Table``: The maximum modulation scheme that is used by smartphones in downlink. LTESniffer supports up to 256QAM in the downlink. Refer to our [paper][paper] for more details. \
+``Active``: Number of detected messages of RNTIs. \
+``Success``: Number of successfully decoded messages over number of detected messages (``Active``). \
+``New TX, ReTX, HARQ, Normal``: Statistic of new messages and retransmitted messages. This function is in development. \
+``W_MIMO, W_pinfor, Other``: Number of messages with wrong radio configuration, only for debugging. \
 
-**API Mode**
-``Detected Identity``: The name of detected identity.
-``Value``: The value of detected identity.
-``From Message``: The name of the message that contains the detected identity.
+**Uplink Sniffing Mode** 
+
+``Max Mod``: The maximum modulation scheme that is used by smartphones in uplink. It can be 16/64/256QAM depending on the support of smartphones and the configuration of the network. Refer to our [paper][paper] for more details. \
+``SNR``: Signal-to-noise ratio (dB). Low SNR means the uplink signal quality from the smartphone is bad. One possible reason is the smartphone is far from the sniffer. \
+``DL-UL_delay``: The average of time delay between downlink signal from the base station and uplink signal from the smartphone. \
+``Other Info``: Information only for debugging. \
+
+**API Mode** 
+
+``Detected Identity``: The name of detected identity. \
+``Value``: The value of detected identity. \
+``From Message``: The name of the message that contains the detected identity. \
 
 <!-- ## FAQ
 **Q:** Is it possible to capture and see the phone call content using LTESniffer? \
