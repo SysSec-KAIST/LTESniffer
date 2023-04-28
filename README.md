@@ -198,20 +198,20 @@ The effective range for sniffing uplink is limited in LTESniffer due to the capa
 ``Active``: Number of detected messages of RNTIs. \
 ``Success``: Number of successfully decoded messages over number of detected messages (``Active``). \
 ``New TX, ReTX, HARQ, Normal``: Statistic of new messages and retransmitted messages. This function is in development. \
-``W_MIMO, W_pinfor, Other``: Number of messages with wrong radio configuration, only for debugging. \
+``W_MIMO, W_pinfor, Other``: Number of messages with wrong radio configuration, only for debugging. 
 
 **Uplink Sniffing Mode** 
 
 ``Max Mod``: The maximum modulation scheme that is used by smartphones in uplink. It can be 16/64/256QAM depending on the support of smartphones and the configuration of the network. Refer to our [paper][paper] for more details. \
 ``SNR``: Signal-to-noise ratio (dB). Low SNR means the uplink signal quality from the smartphone is bad. One possible reason is the smartphone is far from the sniffer. \
 ``DL-UL_delay``: The average of time delay between downlink signal from the base station and uplink signal from the smartphone. \
-``Other Info``: Information only for debugging. \
+``Other Info``: Information only for debugging. 
 
 **API Mode** 
 
 ``Detected Identity``: The name of detected identity. \
 ``Value``: The value of detected identity. \
-``From Message``: The name of the message that contains the detected identity. \
+``From Message``: The name of the message that contains the detected identity. 
 
 <!-- ## FAQ
 **Q:** Is it possible to capture and see the phone call content using LTESniffer? \
