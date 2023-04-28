@@ -11,12 +11,10 @@ a passive sniffer that can capture privacy-related packets on the air. However, 
 Please refer to our [paper][paper] for more details.
 
 ## What does LTESniffer capture?
-LTESniffer captures the LTE wireless packets between the cell tower and users. It supports capturing the traffic in two directions, the downlink traffic from the cell tower to users; and the uplink traffic from nearby users to the cell tower.
+LTESniffer is a tool that can capture the LTE wireless messages that are sent between a cell tower and smartphones connected to it. LTESniffer supports capturing the messages in both directions, from the tower to the smartphones, and from the smartphones back to the cell tower.
 
-LTESniffer can only obtain encrypted packets in most cases because the traffic between the cell tower and users is mostly encrypted. However, some packets are transferred in plaintext by design. For example, the following plain-text messages can be seen in the pcap files from LTESniffer:
-- System Information Blocks (SIBs), which are broadcast messages containing relevant information for UEs to access the cell tower.
-- Paging messages, which are broadcast messages to request UEs to establish communication with the network.
-- Messages at the beginning of the connection, before the encryption is activated between UEs and the network.
+LTESniffer can **NOT DECRYPT** encrypted messages between the cell tower and smartphones. It can be used for analyzing unencrypted parts of the communication between the cell tower and smartphones. For example, for encrypted messages, it can allow the user to analyze unencrypted parts, such as headers in MAC and physical layers. However, those messages sent in plaintext can be completely analyzable. For example, the broadcast messages sent by the cell tower, or the messages at the beginning of the connection are completely visible.
+
 ## Ethical Consideration
 
 The main purpose of LTESniffer is to support security and analysis research on the cellular network. Due to the collection of uplink-downlink user data, any use of LTESniffer must follow the local regulations on sniffing the LTE traffic. We are not responsible for any illegal purposes such as intentionally collecting user privacy-related information.
@@ -35,7 +33,7 @@ LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][s
 
 ## Hardware and Software Requirement
 ### OS Requirement
-Currently, LTESniffer works stably on Ubuntu 18.04, other Ubuntu versions will be supported in the next release.
+Currently, LTESniffer works stably on Ubuntu 18.04/20.04.
 
 ### Hardware Requirement
 Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores. Especially when the base station has many active users during the peak hour. LTESniffer was able to achieve real-time decoding when running on an Intel i7-9700K PC to decode traffic on a base station with 150 active users.
@@ -49,7 +47,7 @@ Currently, LTESniffer requires USRP X310 because it needs to synchronize with bo
 
 To sniff only downlink traffic from the base station, one can operate LTESniffer with USRP B210 which is connected to PC via a USB 3.0 port. Similarly, USRB B210 should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
 ## Installation
-**Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04.**
+**Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04/20.04.**
 
 **Dependencies**
 - **Important dependency**: [UHD][uhd] library version >= 4.0 must be installed in advance (recommend building from source). The following steps can be used on Ubuntu 18.04. Refer to UHD Manual for full installation guidance. 
@@ -115,6 +113,9 @@ LTESniffer has 3 main functions:
 
 After building from source, ``LTESniffer`` is located in ``<build-dir>/src/LTESniffer``
 
+Note that before using LTESniffer on the commercial, one should have to check the local regulations on sniffing LTE traffic, as we explained in the **Ethical Consideration**.
+
+To figure out the base station and Uplink-Downlink band the test smartphone is connected to, install [Cellular-Z][app] app on the test smartphone (the app only supports Android). It will show the cell ID and Uplink-Downlink band/frequency to which the test smartphone is connected. Make sure that LTESniffer also connects to the same cell and frequency.
 ### General downlink sniffing
 
 <p align="center">
@@ -139,6 +140,7 @@ example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -C -m 0 -a "num_recv_frames=5
 ```
 
 ### General uplink sniffing
+Note: In the uplink sniffing mode, the test smartphones should be located nearby the sniffer, because the uplink signal power from UE is significantly weaker compared to the downlink signal from the base station.
 
 <p align="center">
   <img src="png/ul_mode_png.png" alt="LTESniffer Uplink Mode">
@@ -179,16 +181,17 @@ The debug mode can be enabled by using option ``-d``. In this case, the debug me
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.
 The name of downlink pcap file: ``sniffer_dl_mode.pcap``, uplink pcap file: ``sniffer_ul_mode.pcap``, and API pcap file: ``api_collector.pcap``.
 The pcap files are located in the same directory ``LTESniffer`` has been executed.
-To enable the WireShark to analyze the decoded packets correctly, please refer to the WireShark configuration guide [here][pcap]. There are also some examples of pcap files in the link.
+To enable the WireShark to analyze the decoded packets correctly, please refer to the WireShark configuration guide [here][pcap]. There are also some examples of pcap files in the link.\
+**Note:** The uplink pcap file contains both uplink and downlink messages. On the WireShark, use this filter to monitor only uplink messages: ``mac-lte.direction == 0``; or this filter to monitor only downlink messages: ``mac-lte.direction == 1``.
 
 ## Application Note
 ### Uplink sniffing mode
 When sniffing LTE uplink, LTESniffer requires USRP X310 because it needs to listen to two different frequencies at the same time, 1 for uplink and 1 for downlink. The main target of the uplink sniffing function is to decode uplink traffic from nearby smartphones. However, as LTESniffer needs to decode the downlink traffic to obtain uplink-downlink DCI messages, it also supports decoding downlink traffic at the same time. Nevertheless, the downlink sniffing function is limited to decoding messages which use transmission modes 1 and 2, since LTESniffer only has 1 antenna for downlink.
 ### Distance for uplink sniffing
 The effective range for sniffing uplink is limited in LTESniffer due to the capability of the RF front-end of the hardware (i.e. SDR). The uplink signal power from UE is significantly weaker compared to the downlink signal because UE is a handheld device that optimizes battery usage, while the eNB uses sufficient power to cover a large area. To successfully capture the uplink traffic, LTESniffer can increase the strength of the signal power by i) being physically close to the UE, or ii) improving the signal reception capability with specialized hardware, such as a directional antenna, dedicated RF front-end, and signal amplifier.
-## FAQ
+<!-- ## FAQ
 **Q:** Is it possible to capture and see the phone call content using LTESniffer? \
-**A:** No. LTE traffic including phone call traffic is encrypted, so you cannot use LTESniffer to know the content of phone calls of someone. Moreover, it is important to note that sniffing phone calls in the commercial network is illegal in most countries.
+**A:** No. LTE traffic including phone call traffic is encrypted, so you cannot use LTESniffer to know the content of phone calls of someone. Moreover, it is important to note that sniffing phone calls in the commercial network is illegal in most countries. -->
 ## Credits
 We sincerely appreciate the [FALCON][falcon] and [SRS team][srsran] for making their great softwares available.
 ## BibTex
@@ -208,3 +211,4 @@ Please refer to our [paper][paper] for more details.
 [uhd]:    https://github.com/EttusResearch/uhd
 [paper]:  https://syssec.kaist.ac.kr/pub/2023/wisec2023_tuan.pdf
 [pcap]:   pcap_file_example/README.md
+[app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
