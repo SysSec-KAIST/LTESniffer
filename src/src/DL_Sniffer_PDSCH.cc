@@ -559,7 +559,7 @@ int PDSCH_Decoder::run_rar_decode(srsran_dci_format_t cur_format,
 		}
         return SRSRAN_ERROR;
 	} else {
-		std::cout << "Config MIMO wrong: " << mimo_ret << std::endl;
+		// std::cout << "Config MIMO wrong: " << mimo_ret << std::endl;
         return SRSRAN_ERROR;
 	}
 }
@@ -989,98 +989,106 @@ void PDSCH_Decoder::print_debug_dl(	std::string name,
 
 std::string PDSCH_Decoder::dci_format(int format)
 {
+	std::string ret = "UNKNOWN";
     switch (format)
     {
     case 0:
-        return "0";
+        ret =  "0";
         break;
     case 1:
-        return "1";
+        ret =  "1";
         break;
     case 2:
-        return "1A";
+        ret =  "1A";
         break;
     case 3:
-        return "1B";
+        ret =  "1B";
         break;
     case 4:
-        return "1C";
+        ret =  "1C";
         break;
     case 5:
-        return "1D";
+        ret =  "1D";
         break;
     case 6:
-        return "2";
+        ret =  "2";
         break;
     case 7:
-        return "2A";
+        ret =  "2A";
         break;
     case 8:
-        return "2B";
+        ret =  "2B";
         break;
     default:
-        return "UNKNOWN";
+        ret =  "UNKNOWN";
         break;
     }
+	return ret;
 }
 
 std::string PDSCH_Decoder::mod_sche(int sche)
 {
+	std::string ret = "UNKNOWN";
     switch (sche)
     {
     case 0:
-        return "BPSK";
+        ret = "BPSK";
         break;
     case 1:
-        return "QPSK";
+        ret = "QPSK";
         break;
     case 2:
-        return "16QAM";
+        ret = "16QAM";
         break;
     case 3:
-        return "64QAM";
+        ret = "64QAM";
         break;
     case 4:
-        return "256QAM";
+        ret = "256QAM";
         break;
     default:
-        return "UNKNOWN";
+        ret = "UNKNOWN";
         break;
     }
+	return ret;
 }
 
 std::string PDSCH_Decoder::rnti_name(uint16_t rnti){
+	std::string ret = "";
     if (rnti == SRSRAN_SIRNTI) { 
-        return "SI_RNTI";
+        ret =  "SI_RNTI";
     }else if (rnti == SRSRAN_PRNTI) {
-        return "P_RNTI";
+        ret = "P_RNTI";
     }else if ((rnti > SRSRAN_RARNTI_START) && (rnti < SRSRAN_RARNTI_END)) { 
-        return "RA_RNTI";
+        ret = "RA_RNTI";
     }else {
-        return "C_RNTI" ;
+        ret = "C_RNTI" ;
     }
+	return ret;
 }
 
 
 std::string convert_id_name_dl(int id){
+	std::string ret = "-";
     switch (id)
     {
     case 0:
-        return "RandomValue";
+        ret =  "RandomValue";
         break;
     case 1:
-        return "TMSI";
+        ret =  "TMSI";
         break;
     case 2:
-        return "Contention Resolution";
+        ret = "Contention Resolution";
         break;
     case 3:
-        return "IMSI";
+        ret = "IMSI";
         break;
     default:
-        return "-";
+        ret = "-";
         break;
     }
+	return ret;
 }
 std::string convert_msg_name_dl(int msg){
 	std::string ret = "-";

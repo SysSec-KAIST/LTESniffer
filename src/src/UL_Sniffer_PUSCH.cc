@@ -517,38 +517,42 @@ int PUSCH_Decoder::check_valid_prb_ul(uint32_t nof_prb){
 
 std::string PUSCH_Decoder::modulation_mode_string(int idx, bool max_64qam)
 {
+    std::string ret = "";
     if (idx <= 10){
-        return "QPSK";
+        ret =  "QPSK";
     }
     else if (idx <= 20) {
-        return "16QAM";
+        ret =  "16QAM";
     }
     else if (idx <= 28 && max_64qam){
-        return "64QAM";
+        ret =  "64QAM";
     }
     else if (idx <= 28 && !max_64qam){
-        return "16QAM";
+        ret =  "16QAM";
     }else {
-        return "ReTx";
+        ret =  "ReTx";
     }
+    return ret;
 }
 
 std::string PUSCH_Decoder::modulation_mode_string_256(int idx)
 {
+    std::string ret = "";
     if (idx <= 5){
-        return "QPSK";
+        ret =  "QPSK";
     }
     else if (idx <= 13) {
-        return "16QAM";
+        ret =  "16QAM";
     }
     else if (idx <= 22){
-        return "64QAM";
+        ret =  "64QAM";
     }
     else if (idx <= 28){
-        return "256QAM";
+        ret =  "256QAM";
     }else {
-        return "ReTx";
+        ret =  "ReTx";
     }
+    return ret;
 }
 
 
@@ -700,54 +704,58 @@ void PUSCH_Decoder::print_uci(srsran_uci_value_t *uci){
     }
 }
 
-std::string convert_id_name(int id){
+std::string convert_id_name(int id){\
+    std::string ret = "-";
     switch (id)
     {
     case ID_RAN_VAL:
-        return "RandomValue";
+        ret =  "RandomValue";
         break;
     case ID_TMSI:
-        return "TMSI";
+        ret =  "TMSI";
         break;
     case ID_CON_RES:
-        return "Contention Resolution";
+        ret =  "Contention Resolution";
         break;
     case ID_IMSI:
-        return "IMSI";
+        ret =  "IMSI";
         break;
     case ID_IMEI:
-        return "IMEI";
+        ret =  "IMEI";
         break;
     case ID_IMEISV:
-        return "IMEISV";
+        ret =  "IMEISV";
         break;
     default:
-        return "-";
+        ret =  "-";
         break;
     }
+    return ret;
 }
 std::string convert_msg_name(int msg){
+    std::string ret = "-";
     switch (msg)
     {
     case 0:
-        return "RRC Connection Request";
+        ret =  "RRC Connection Request";
         break;
     case 1:
-        return "RRC Connection Setup";
+        ret =  "RRC Connection Setup";
         break;
     case 2:
-        return "Attach Request";
+        ret =  "Attach Request";
         break;
     case 3:
-        return "Identity Response";
+        ret =  "Identity Response";
         break;
     case 4:
-        return "UECapability";
+        ret =  "UECapability";
         break;
     default:
-        return "-";
+        ret =  "-";
         break;
     }
+    return ret;
 }
 void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string value, int msg){
     std::cout << std::left << std::setw(4) << tti/10 << "-" << std::left << std::setw(5) << tti%10;
