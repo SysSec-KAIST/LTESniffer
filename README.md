@@ -35,7 +35,7 @@ LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][s
 
 ## Hardware and Software Requirement
 ### OS Requirement
-Currently, LTESniffer works stablely on Ubuntu 18.04, other Ubuntu versions will be supported in the next release.
+Currently, LTESniffer works stably on Ubuntu 18.04, other Ubuntu versions will be supported in the next release.
 
 ### Hardware Requirement
 Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores. Especially when the base station has many active users during the peak hour. LTESniffer was able to achieve real-time decoding when running on an Intel i7-9700K PC to decode traffic on a base station with 150 active users.
