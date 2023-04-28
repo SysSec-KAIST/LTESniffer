@@ -75,9 +75,11 @@ int PDSCH_Decoder::init_pdsch_decoder(falcon_ue_dl_t *_falcon_ue_dl,
 	ran_dl_collection 	= _ran_dl_collection;
 	sfn 				= _sfn;
 	sf_idx 				= _sf_idx;
+	return SRSRAN_SUCCESS;
 }
 
 int PDSCH_Decoder::decode_imsi_paging(uint8_t* sdu_ptr, int length){
+  int ret = SRSRAN_ERROR;
   pcch_msg_s     pcch_msg;
   asn1::cbit_ref bref(sdu_ptr, length);
   if (pcch_msg.unpack(bref) == asn1::SRSASN_SUCCESS or pcch_msg.msg.type().value == pcch_msg_type_c::types_opts::c1) {
@@ -89,10 +91,12 @@ int PDSCH_Decoder::decode_imsi_paging(uint8_t* sdu_ptr, int length){
 			paging_record_s paging_record = paging_record_list[record];
 			if (paging_record.ue_id.type() == paging_ue_id_c::types_opts::imsi){
 				//printf("Found IMSI paging\n");
+				ret = SRSRAN_SUCCESS;
 			}
 		}
 	}
   }
+  return ret;
 }
 
 int PDSCH_Decoder::decode_rrc_connection_setup(uint8_t* sdu_ptr, int length, ltesniffer_ue_spec_config_t *ue_config){
@@ -233,6 +237,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 		return ret;
 	} else {
 		//nothing
+		return ret;
 	}
 }
 
@@ -462,6 +467,8 @@ void PDSCH_Decoder::write_pcap(std::string RNTI_name, uint8_t *pdu, uint32_t pdu
 }
 
 int PDSCH_Decoder::unpack_rar_response_ul_mode(uint8_t *payload, int length, DL_Sniffer_rar_result &result){
+
+	int ret = SRSRAN_ERROR;
 	srsran::rar_pdu rar_pdu_msg;
 	rar_pdu_msg.init_rx(length);
 	if (rar_pdu_msg.parse_packet(payload) == SRSRAN_SUCCESS) //T_note: check here
@@ -493,9 +500,10 @@ int PDSCH_Decoder::unpack_rar_response_ul_mode(uint8_t *payload, int length, DL_
 			// 	std::cout << unsigned(result.grant[g]) << " ";
 			// }
 			// std::cout << std::endl;
-			return SRSRAN_SUCCESS;
+			ret =  SRSRAN_SUCCESS;
 		}
 	}
+	return ret;
 }
 
 int PDSCH_Decoder::run_rar_decode(srsran_dci_format_t cur_format,
@@ -1075,27 +1083,29 @@ std::string convert_id_name_dl(int id){
     }
 }
 std::string convert_msg_name_dl(int msg){
+	std::string ret = "-";
     switch (msg)
     {
     case 0:
-        return "RRC Connection Request";
+        ret =  "RRC Connection Request";
         break;
     case 1:
-        return "RRC Connection Setup";
+        ret =  "RRC Connection Setup";
         break;
     case 2:
-        return "Attach Request";
+        ret =  "Attach Request";
         break;
     case 3:
-        return "Identity Response";
+        ret =  "Identity Response";
         break;
     case 4:
-        return "UECapability";
+        ret =  "UECapability";
         break;
     default:
-        return "-";
+        ret = "-";
         break;
     }
+	return ret;
 }
 void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::string value, int msg){
     std::cout << std::left << std::setw(4) << tti/10 << "-" << std::left << std::setw(5) << tti%10;
