@@ -123,15 +123,15 @@ uint16_t get_tti_ul_harq(uint16_t cur_tti)
 	}
 }
 
-int update_rv(int old_rv){
-  if (old_rv == 0){
-    return 2;
-  } else if (old_rv == 2){
-    return 3;
-  } else if (old_rv == 3){
-    return 1;
-  }
-}
+// int update_rv(int old_rv){
+//   if (old_rv == 0){
+//     return 2;
+//   } else if (old_rv == 2){
+//     return 3;
+//   } else if (old_rv == 3){
+//     return 1;
+//   }
+// }
 
 void SubframeWorker::work(){
   std::string test_string = '[' + std::to_string(idx) + ']' + '[' + std::to_string(sfn) + '-' + std::to_string(sf_idx) + ']';

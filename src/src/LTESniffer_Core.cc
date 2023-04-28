@@ -566,6 +566,7 @@ bool LTESniffer_Core::run(){
 
   /* Print statistic of harq retransmission*/
   //if (harq_mode){ harq.printHARQDatabase(); }
+  return EXIT_SUCCESS;
 }
 
 void LTESniffer_Core::stop() {
