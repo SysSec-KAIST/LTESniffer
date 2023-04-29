@@ -43,7 +43,7 @@ Achieving real-time decoding of LTE traffic requires a high-performance CPU with
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer requires USRP X310 because it needs to synchronize with both uplink and downlink frequencies at a time. USRP X310 should be equipped with GPSDO to maintain stable synchronization. Additionally, two RX antennas are required to enable LTESniffer to decode downlink messages in transmission modes 3 and 4. 
+Currently, LTESniffer requires USRP X310 with 2 daughterboards, especially when sniffing the uplink traffic. This is because sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Also, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. The function might not work with USRP X310 equipped with a single TwinRX daughterboard. The USRP X310 should be equipped with GPSDO to maintain stable synchronization. Additionally, two RX antennas are required to enable LTESniffer to decode downlink messages in transmission modes 3 and 4. 
 
 To sniff only downlink traffic from the base station, one can operate LTESniffer with USRP B210 which is connected to PC via a USB 3.0 port. Similarly, USRB B210 should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
 ## Installation
@@ -229,6 +229,25 @@ Please refer to our [paper][paper] for more details.
   year = {2023}
 }
 ```
+## FAQ
+
+**Q:** What kind of SDRs I can use to run LTESniffer? \
+**A:** To sniff uplink traffic, LTESniffer requires a USRP X310 with 2 daughterboards due to two reasons. Firstly, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Secondly, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. The function might not work with USRP X310 equipped with a single TwinRX daughterboard.
+
+**Q:** Is it mandatory to use GPSDO with the USRP in order to run LTESniffer? \
+**A:** No, GPSDO is not mandatory to run LTESniffer. Without GPSDO, LTESniffer still can synchronize with the LTE signal to decode the packets. However, using GPSDO can help achieve more stable synchronization. 
+
+**Q:** Can LTESniffer work with Blade RF to sniff downlink traffic from the base station? \
+**A:** Technically, any SDRs supported by srsRAN library such as Blade RF can be used to run LTESniffer in the downlink sniffing mode. However, we only tested the downlink sniffing function of LTESniffer with USRP B210 and X310, so we cannot guarantee that other SDRs also work. 
+
+**Q:** Is it illegal to use LTESniffer to sniff the LTE traffic? \
+**A:** Sniffing LTE traffic is illegal in most countries. Therefore, before using LTESniffer on the commercial LTE base station, you should have to check the local regulations on sniffing LTE traffic. Another way to legally test LTESniffer is setting up a personal LTE network by using [srsRAN][srsran] - an open-source LTE implementation. However, your personal network should be located in a Faraday cage to avoid interfering with other users. 
+
+**Q:** Can LTESniffer be used to capture and view the content of someone's traffic? \
+**A:** No, the traffic between the base station and users is mostly encrypted, so you cannot see the content of the traffic. Also, it is important to note that sniffing someone's traffic in the LTE network is illegal in most countries. Please check your local regulations on sniffing LTE traffic before using LTESniffer in the commercial network.
+
+**Q:** Is there any device identity exposed in plaintext in the LTE network? \
+**A:** Yes, there are several cases in which the device identity is exposed in plaintext. For example, it is sent in plaintext when the UE initiates the wireless connection with the base station. Another case is when the base station sends the paging message to UE. Although the network primarily uses a temporary identity (TMSI) in those cases, improper refreshing of TMSI can lead to user location tracking, as previous research has shown. Note that IMSI, the permanent identity, is sent in plaintext only the very first time UE connects to the base station. Therefore, LTESniffer can only obtain IMSI if it is running at the same time. Otherwise, it can obtain TMSI, the temporary identity, from the messages at the beginning of the connection, or from the paging messages. 
 
 [falcon]: https://github.com/falkenber9/falcon
 [srsran]: https://github.com/srsran/srsRAN_4G
