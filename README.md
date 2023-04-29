@@ -10,7 +10,7 @@ a passive sniffer that can capture privacy-related packets on the air. However, 
 
 Please refer to our [paper][paper] for more details.
 
-## What does LTESniffer capture?
+## LTESniffer in layman's terms
 LTESniffer is a tool that can capture the LTE wireless messages that are sent between a cell tower and smartphones connected to it. LTESniffer supports capturing the messages in both directions, from the tower to the smartphones, and from the smartphones back to the cell tower.
 
 LTESniffer can **NOT DECRYPT** encrypted messages between the cell tower and smartphones. It can be used for analyzing unencrypted parts of the communication between the cell tower and smartphones. For example, for encrypted messages, it can allow the user to analyze unencrypted parts, such as headers in MAC and physical layers. However, those messages sent in plaintext can be completely analyzable. For example, the broadcast messages sent by the cell tower, or the messages at the beginning of the connection are completely visible.
@@ -232,22 +232,23 @@ Please refer to our [paper][paper] for more details.
 ## FAQ
 
 **Q:** What kind of SDRs I can use to run LTESniffer? \
-**A:** To sniff uplink traffic, LTESniffer requires a USRP X310 with 2 daughterboards due to two reasons. Firstly, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Secondly, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. The function might not work with USRP X310 equipped with a single TwinRX daughterboard.
+**A:** To sniff only downlink traffic from the base station, LTESniffer works well with USRP B210 with 2 RX antennas.
+To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards. There are two reasons for this. First, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be simply achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Second, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies.
 
 **Q:** Is it mandatory to use GPSDO with the USRP in order to run LTESniffer? \
-**A:** No, GPSDO is not mandatory to run LTESniffer. Without GPSDO, LTESniffer still can synchronize with the LTE signal to decode the packets. However, using GPSDO can help achieve more stable synchronization. 
+**A:** GPSDO is useful for more stable synchronization. However, without GPSDO, LTESniffer still can synchronize with the LTE signal to decode the packets. 
 
-**Q:** Can LTESniffer work with Blade RF to sniff downlink traffic from the base station? \
-**A:** Technically, any SDRs supported by srsRAN library such as Blade RF can be used to run LTESniffer in the downlink sniffing mode. However, we only tested the downlink sniffing function of LTESniffer with USRP B210 and X310, so we cannot guarantee that other SDRs also work. 
+**Q:** For downlink traffic, can I use a cheaper SDR? \
+**A:** Technically, any SDRs supported by srsRAN library such as Blade RF can be used to run LTESniffer in the downlink sniffing mode. However, we only tested the downlink sniffing function of LTESniffer with USRP B210 and X310. 
 
 **Q:** Is it illegal to use LTESniffer to sniff the LTE traffic? \
-**A:** Sniffing LTE traffic is illegal in most countries. Therefore, before using LTESniffer on the commercial LTE base station, you should have to check the local regulations on sniffing LTE traffic. Another way to legally test LTESniffer is setting up a personal LTE network by using [srsRAN][srsran] - an open-source LTE implementation. However, your personal network should be located in a Faraday cage to avoid interfering with other users. 
+**A:** You should have to check the local regulations on sniffing (unencrypted) LTE traffic. Another way to test LTESniffer is setting up a personal LTE network by using [srsRAN][srsran] - an open-source LTE implementation in a Faraday cage. 
 
-**Q:** Can LTESniffer be used to capture and view the content of someone's traffic? \
-**A:** No, the traffic between the base station and users is mostly encrypted, so you cannot see the content of the traffic. Also, it is important to note that sniffing someone's traffic in the LTE network is illegal in most countries. Please check your local regulations on sniffing LTE traffic before using LTESniffer in the commercial network.
+**Q:** Can LTESniffer be used to view the content of messages between two users? \
+**A:** One can see only the "unencrypted" part of the messages. Note that the air traffic between the base station and users is mostly encrypted.
 
 **Q:** Is there any device identity exposed in plaintext in the LTE network? \
-**A:** Yes, there are several cases in which the device identity is exposed in plaintext. For example, it is sent in plaintext when the UE initiates the wireless connection with the base station. Another case is when the base station sends the paging message to UE. Although the network primarily uses a temporary identity (TMSI) in those cases, improper refreshing of TMSI can lead to user location tracking, as previous research has shown. Note that IMSI, the permanent identity, is sent in plaintext only the very first time UE connects to the base station. Therefore, LTESniffer can only obtain IMSI if it is running at the same time. Otherwise, it can obtain TMSI, the temporary identity, from the messages at the beginning of the connection, or from the paging messages. 
+**A:** Yes, literature shows that there are multiple identities exposed, such as TMSI, GUTI, IMSI, and RNTI. Please refer to the academic literature for more details. e.g. [Watching the Watchers: Practical Video Identification Attack in LTE Networks][watching]
 
 [falcon]: https://github.com/falkenber9/falcon
 [srsran]: https://github.com/srsran/srsRAN_4G
@@ -255,3 +256,4 @@ Please refer to our [paper][paper] for more details.
 [paper]:  https://syssec.kaist.ac.kr/pub/2023/wisec2023_tuan.pdf
 [pcap]:   pcap_file_example/README.md
 [app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
+[watching] https://syssec.kaist.ac.kr/pub/2022/sec22summer_bae.pdf
