@@ -78,7 +78,7 @@ int PDSCH_Decoder::init_pdsch_decoder(falcon_ue_dl_t *_falcon_ue_dl,
 	return SRSRAN_SUCCESS;
 }
 
-int PDSCH_Decoder::decode_imsi_paging(uint8_t* sdu_ptr, int length){
+int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t* sdu_ptr, int length){
   int ret = SRSRAN_ERROR;
   pcch_msg_s     pcch_msg;
   asn1::cbit_ref bref(sdu_ptr, length);
@@ -90,7 +90,23 @@ int PDSCH_Decoder::decode_imsi_paging(uint8_t* sdu_ptr, int length){
 		for (int record = 0; record < record_size; record++){
 			paging_record_s paging_record = paging_record_list[record];
 			if (paging_record.ue_id.type() == paging_ue_id_c::types_opts::imsi){
+				std::string imsi_str;
+				for (int k = 0; k < 15; k++){
+					uint8_t temp_imsi = paging_record.ue_id.imsi()[k];
+					imsi_str.append(std::to_string(temp_imsi));
+					print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str , MSG_PAGING);
+					mcs_tracking->increase_nof_api_msg();
+					ret = SRSRAN_SUCCESS;
+				}
 				//printf("Found IMSI paging\n");
+				ret = SRSRAN_SUCCESS;
+			}else if (paging_record.ue_id.type() == paging_ue_id_c::types_opts::s_tmsi){
+				uint32_t m_tmsi = paging_record.ue_id.s_tmsi().m_tmsi.to_number();
+                std::stringstream ss;
+                ss << std::hex << m_tmsi;
+                std::string m_tmsi_str = ss.str();
+				print_api_dl(dl_sf->tti, 65534, ID_TMSI, m_tmsi_str , MSG_PAGING);
+				mcs_tracking->increase_nof_api_msg();
 				ret = SRSRAN_SUCCESS;
 			}
 		}
@@ -181,7 +197,10 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 				write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, false);
 				
 				if (RNTI_name == "P_RNTI" && (api_mode == 2 || api_mode == 3)){ //IMSI catching modes
-					decode_imsi_paging(pdsch_res[tb].payload, result_length);
+					int paging_ret = decode_imsi_tmsi_paging(pdsch_res[tb].payload, result_length);
+					if (paging_ret == SRSRAN_SUCCESS){
+						pcapwriter->write_dl_paging_api(pdsch_res[tb].payload, result_length, cur_rnti, true, tti, false);
+					}
 				}
 				/*Unpack PDSCH msg to receive SDU, SDU and then decode RRC Connection Setup*/
 				srsran::sch_pdu pdu(20, srslog::fetch_basic_logger("MAC"));
@@ -1109,6 +1128,9 @@ std::string convert_msg_name_dl(int msg){
     case 4:
         ret =  "UECapability";
         break;
+	case 5:
+		ret = "Paging";
+		break;
     default:
         ret = "-";
         break;

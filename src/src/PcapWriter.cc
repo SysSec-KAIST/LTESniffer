@@ -183,3 +183,8 @@ void LTESniffer_pcap_writer::write_dl_crnti_api(uint8_t* pdu, uint32_t pdu_len_b
 {
   pack_and_write_api(pdu, pdu_len_bytes, retx, crc_ok, tti, rnti, DIRECTION_DOWNLINK, C_RNTI);
 }
+
+void LTESniffer_pcap_writer::write_dl_paging_api(uint8_t* pdu, uint32_t pdu_len_bytes, uint16_t rnti, bool crc_ok, uint32_t tti, bool retx)
+{
+  pack_and_write_api(pdu, pdu_len_bytes, retx, crc_ok, tti, SRSRAN_PRNTI, DIRECTION_DOWNLINK, P_RNTI);
+}

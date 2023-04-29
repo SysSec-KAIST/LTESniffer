@@ -93,7 +93,7 @@ public:
                            uint32_t sf_idx);
     void unpack_pdsch_message(uint8_t* sdu_ptr, int length);
     int  decode_rrc_connection_setup(uint8_t* sdu_ptr, int length, ltesniffer_ue_spec_config_t *ue_config);                       
-    int  decode_imsi_paging(uint8_t* sdu_ptr, int length);
+    int  decode_imsi_tmsi_paging(uint8_t* sdu_ptr, int length);
 
     int  run_decode(int &mimo_ret,
                     srsran_dci_format_t cur_format,
