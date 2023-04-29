@@ -48,6 +48,7 @@ public:
     /*Function for api*/
     void write_ul_crnti_api(uint8_t* pdu, uint32_t pdu_len_bytes, uint16_t crnti, uint32_t tti);
     void write_dl_crnti_api(uint8_t *pdu, uint32_t pdu_len_bytes, uint16_t crnti, bool crc_ok, uint32_t tti, bool retx); //C RNTI
+    void write_dl_paging_api(uint8_t* pdu, uint32_t pdu_len_bytes, uint16_t rnti, bool crc_ok, uint32_t tti, bool retx);
 private:
     std::mutex pcap_mutex;
     bool enable_write; 
