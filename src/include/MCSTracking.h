@@ -159,7 +159,7 @@ private:
     bool        en_debug        = false;
     uint16_t    target_rnti     = 0;
     int         max_size        = DL_SNIFFER_MCSTRACKING_MAX_SIZE;
-    long double interval        = 5.0;   // 4 secs
+    long double interval        = 5.0;   // 5 secs
     uint16_t    rar_thresold    = 3; // number of messages with DCI > 1A after rar response
     std::mutex  tracking_mutex;
     // std::mutex  config_mutex;

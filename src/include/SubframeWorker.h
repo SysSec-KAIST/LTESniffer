@@ -64,12 +64,12 @@ private:
   bool                  updateMetaFormats;
   bool                  collision_dw, collision_up;
   DCIBlindSearchStats   stats;
-  LTESniffer_pcap_writer  *pcapwriter;
+  LTESniffer_pcap_writer *pcapwriter;
   PDSCH_Decoder         *pdschdecoder;
   int                   mcs_tracking_mode;
   MCSTracking           *mcs_tracking;
-  int harq_mode;
-  HARQ *harq;
+  int                   harq_mode;
+  HARQ                  *harq;
 
   //uplink
   bool                  config = false;

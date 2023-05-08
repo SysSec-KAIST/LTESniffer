@@ -49,7 +49,7 @@ Phy::Phy(uint32_t nof_rx_antennas,
     std::shared_ptr<SnifferThread> tem_thread(new SnifferThread(avail, pending, *temp_return));
     sniffer_thread.push_back(std::move(tem_thread));
   }
-  for (auto i = 0; i< nof_workers; i++){
+  for (auto i = 0; i < nof_workers; i++){
     sniffer_thread.at(i)->run_thread();
   }
 }

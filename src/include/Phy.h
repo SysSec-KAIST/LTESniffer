@@ -43,7 +43,7 @@ public:
   void joinPending();
   PhyCommon& getCommon();
   DCIMetaFormats& getMetaFormats();
-  std::vector<std::shared_ptr<SubframeWorker> >& getWorkers();
+  std::vector<std::shared_ptr<SubframeWorker>>& getWorkers();
   bool setCell(srsran_cell_t cell);
   void setRNTI(uint16_t rnti);
   void setChestCFOEstimateEnable(bool enable, uint32_t mask);
