@@ -31,6 +31,7 @@ struct SubframeBuffer {
   SubframeBuffer& operator=(const SubframeBuffer&) = delete; //prevent copy
   ~SubframeBuffer();
   const uint32_t rf_nof_rx_ant;
-  cf_t *sf_buffer[SRSRAN_MAX_PORTS] = {nullptr};
+  cf_t *sf_buffer_a[SRSRAN_MAX_PORTS] = {nullptr};
+  cf_t *sf_buffer_b[SRSRAN_MAX_PORTS] = {nullptr};
   cf_t *sf_buffer_offset[UL_SNIFFER_MAX_NOF_OFFSET] = {nullptr}; // idx 0 for 32, idx 1 for 64
 };

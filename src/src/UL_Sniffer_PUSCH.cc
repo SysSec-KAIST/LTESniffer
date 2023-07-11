@@ -263,7 +263,7 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
     }
 
     /*Only print debug when SNR of RNTI >= 1 */
-    if ((en_debug) && (enb_ul.chest_res.snr_db >= 1))
+    if ((en_debug) && (enb_ul.chest_res.snr_db >= 2) ) // && (enb_ul.chest_res.snr_db >= 1)
     { //|| target_rnti !=0
         float signal_power = enb_ul.chest_res.snr_db;
         float falcon_signal_power = 0.0f;
@@ -388,7 +388,7 @@ void print_ul_grant_dci_0(srsran_pusch_grant_t &ul_grant, uint16_t tti, uint16_t
 
 void PUSCH_Decoder::decode()
 {
-    enb_ul.in_buffer = original_buffer[1]; // 0 for downlink, 1 for uplink
+    enb_ul.in_buffer = original_buffer[0]; // 0 for downlink, 1 for uplink, now 0 because there are 2 separate buffers
     srsran_enb_ul_fft(&enb_ul);            // run FFT to uplink samples
     sf_power->computePower(enb_ul.sf_symbols);
 
@@ -675,7 +675,7 @@ void PUSCH_Decoder::work_prach()
     if (srsran_prach_tti_opportunity(&prach, ul_sf.tti, -1))
     {
         memcpy(&samples[0],
-               original_buffer[1],
+               original_buffer[0],
                sizeof(cf_t) * SRSRAN_SF_LEN_PRB(enb_ul.cell.nof_prb));
         // Detect possible PRACHs
         srsran_prach_detect_offset(&prach,

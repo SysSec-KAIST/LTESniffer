@@ -49,13 +49,13 @@ SubframeWorker::SubframeWorker(uint32_t idx,
   {
   case DL_MODE:
     /* Config for Downlink Sniffing function*/
-    srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, common.nof_rx_antennas);
+    srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer_a, max_prb, common.nof_rx_antennas);
     /* PDSCH decoder (Downlink)*/
     pdschdecoder = new PDSCH_Decoder(idx, pcapwriter, mcs_tracking, common.getRNTIManager(), harq, mcs_tracking_mode, harq_mode, common.nof_rx_antennas);
     break;
   case UL_MODE:
     /* Config for Downlink Sniffing function*/
-    srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, 1); // only 1 antenna for DL in the UL Sniffer Mode
+    srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer_a, max_prb, 1); // only 1 antenna for DL in the UL Sniffer Mode
     /* PDSCH decoder (Downlink)*/
     pdschdecoder = new PDSCH_Decoder(idx,
                                      pcapwriter,
@@ -69,14 +69,14 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     puschdecoder = new PUSCH_Decoder(enb_ul,
                                      ul_sf,
                                      ulsche,
-                                     sfb.sf_buffer,
+                                     sfb.sf_buffer_b,
                                      sfb.sf_buffer_offset,
                                      ul_cfg,
                                      pcapwriter,
                                      mcs_tracking,
                                      mcs_tracking->get_debug_mode());
     /*Uplink enb init*/
-    if (srsran_enb_ul_init(&enb_ul, sfb.sf_buffer[1], 110))
+    if (srsran_enb_ul_init(&enb_ul, sfb.sf_buffer_b[0], 110))
     { // 110 = max PRB
       ERROR("Error initiating ENB UL");
       return;
@@ -218,7 +218,7 @@ DCIBlindSearchStats &SubframeWorker::getStats()
 
 cf_t *SubframeWorker::getBuffer(uint32_t antenna_idx)
 {
-  return sfb.sf_buffer[antenna_idx];
+  return sfb.sf_buffer_a[antenna_idx];
 }
 
 void SubframeWorker::run_dl_mode(SubframeInfo &subframeInfo)
@@ -257,7 +257,7 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
     if (config == false)
     {
       ul_cfg.dmrs = ulsche->get_dmrs();
-      ;
+      
       if (srsran_enb_ul_set_cell(&enb_ul, falcon_ue_dl.q->cell, &ul_cfg.dmrs, nullptr))
       {
         ERROR("Error set cell ENB UL");
@@ -271,7 +271,6 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
       ul_cfg.hopping.hopping_offset = ulsche->sib2.rr_cfg_common.pusch_cfg_common.pusch_cfg_basic.pusch_hop_offset;
       ul_cfg.hopping.n_sb = ulsche->sib2.rr_cfg_common.pusch_cfg_common.pusch_cfg_basic.n_sb;
       ul_cfg.hopping.n_rb_ho = ulsche->sib2.rr_cfg_common.pusch_cfg_common.pusch_cfg_basic.pusch_hop_offset;
-      ;
 
       /*RAR decode hopping config to convert dci 0 to ul grant*/
       pdschdecoder->set_hopping(ul_cfg.hopping);
@@ -297,7 +296,7 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
       /*Get Uplink and Downlink dci and grant lists*/
       std::vector<DCI_UL> dci_ul = subframeInfo.getDCICollection().getULSnifferDCI_UL();            // get UL DCI0 list
       std::vector<DL_Sniffer_DCI_DL> dci_dl = subframeInfo.getDCICollection().getDLSnifferDCI_DL(); // get DL DCI list
-
+      // std::cout << "SF: " << tti/10 << "." << tti%10 << " -- Nof_DCI = " << dci_dl.size() << " / " << dci_ul.size() << std::endl;
       /*UL grant for RRC Connection Request is sent in RAR response (msg 2),
       / so convert UL grant from msg2 to general UL grant*/
       std::vector<DCI_UL> rar_dci_ul_vector;
@@ -338,8 +337,14 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
 
       /*Push current UL DCI0 to database to decode 4ms later*/
       ulsche->pushULSche(tti, dci_ul);
+      // ulsche->pushULSche(tti + 1, dci_ul);
+      // ulsche->pushULSche(tti - 1, dci_ul);
+      // ulsche->pushULSche(tti + 2, dci_ul);
+      // ulsche->pushULSche(tti - 2, dci_ul);
       /*Push current RAR grant to database to decode 4ms later*/
       ulsche->push_rar_ULSche(tti, rar_dci_ul_vector);
+      // ulsche->push_rar_ULSche(tti + 1, rar_dci_ul_vector);
+      // ulsche->push_rar_ULSche(tti - 1, rar_dci_ul_vector);
       puschdecoder->init_pusch_decoder(ulsche->getULSche(tti),
                                        ulsche->get_rar_ULSche(tti),
                                        ul_sf,

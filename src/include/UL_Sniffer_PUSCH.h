@@ -103,7 +103,7 @@ private:
     bool configed           = false;
     ULSchedule              *ulsche;
     cf_t                    **original_buffer   = {nullptr};
-    cf_t                    ** buffer_offset    = {nullptr};
+    cf_t                    **buffer_offset    = {nullptr};
     SubframePower           *sf_power;
 
     std::vector<DCI_UL>     *dci_ul;

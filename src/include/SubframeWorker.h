@@ -33,7 +33,8 @@ public:
   void                  work();
   void                  printStats();
   cf_t*                 getBuffer(uint32_t antenna_idx);
-  cf_t**                getBuffers() {return sfb.sf_buffer;}
+  cf_t**                getBuffers_a() {return sfb.sf_buffer_a;}
+  cf_t**                getBuffers_b() {return sfb.sf_buffer_b;}
   cf_t**                getBuffers_offset() {return sfb.sf_buffer_offset;}
   uint32_t              getSfidx() const {return sf_idx;}
   uint32_t              getSfn() const {return sfn;}

@@ -31,6 +31,24 @@
 #define ENABLE_AGC_DEFAULT
 using namespace std;
 
+cf_t  uhd_dummy_buffer0[LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE];
+cf_t  uhd_dummy_buffer1[LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE];
+cf_t  uhd_dummy_buffer2[LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE];
+cf_t  uhd_dummy_buffer3[LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE];
+cf_t* uhd_dummy_buffer[4] = {uhd_dummy_buffer0, uhd_dummy_buffer1, uhd_dummy_buffer2, uhd_dummy_buffer3}; //dummy buffer to offset data
+bool  align_usrp = true;
+std::atomic<bool> uhd_stop(false);// std::atomic<bool> uhd_stop(false);
+std::mutex mtx_a;
+std::mutex mtx_b;
+std::condition_variable cv;         // to notify all uhd streamming threads to start getting samples
+std::condition_variable a_fn_cv;    // notify the waiting-main thread that uhd stream a has finished
+std::condition_variable b_fn_cv;    // notify the waiting-main thread that uhd stream b has finished
+bool a_triggered = false;
+bool b_triggered = false;
+bool a_finished = false;
+bool b_finished = false;
+UhdStreamThread uhd_stream_thread;  //control multiple uhd threads
+
 LTESniffer_Core::LTESniffer_Core(const Args& args):
   go_exit(false),
   args(args),
@@ -43,6 +61,7 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   ulsche(args.target_rnti, &ul_harq, args.en_debug),
   api_mode(args.api_mode)
 {
+  srsran_filesink_init(&file_sink, "iq_sample_dl.bin", SRSRAN_COMPLEX_FLOAT_BIN);
   /*create pcap writer and name of output file*/    
   auto now = std::chrono::system_clock::now();
   std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
@@ -114,10 +133,12 @@ bool LTESniffer_Core::run(){
   falcon_ue_dl_t     falcon_ue_dl;
   srsran_dl_sf_cfg_t dl_sf;
   srsran_pdsch_cfg_t pdsch_cfg;
-  srsran_ue_sync_t   ue_sync;
+  srsran_ue_sync_t   ue_sync_a;
+  srsran_ue_sync_t   ue_sync_b;
 
 #ifndef DISABLE_RF
-  srsran_rf_t rf;             // to open RF devices
+  srsran_rf_t rf_a;           // to open RF devices
+  srsran_rf_t rf_b;
 #endif
   int ret, n;                 // return
   uint8_t mch_table[10];      // unknown
@@ -129,6 +150,7 @@ bool LTESniffer_Core::run(){
   uint16_t nof_lost_sync = 0;
   int mcs_tracking_timer = 0;
   int update_rnti_timer = 0;
+  bool start_recording = false;
   /* Set CPU affinity*/
   if (args.cpu_affinity > -1) {
     cpu_set_t cpuset;
@@ -151,50 +173,64 @@ bool LTESniffer_Core::run(){
 #ifndef DISABLE_RF
   if (args.input_file_name == "") {
     printf("Opening RF device with %d RX antennas...\n", args.rf_nof_rx_ant);
-    char rfArgsCStr[1024];
-    strncpy(rfArgsCStr, args.rf_args.c_str(), 1024);
-    if (srsran_rf_open_multi(&rf, rfArgsCStr, args.rf_nof_rx_ant)) {
-      fprintf(stderr, "Error opening rf\n");
+    char rfArgsCStr_a[1024];
+    char rfArgsCStr_b[1024];
+    std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,serial=3218D4C"; //3218D4C num_recv_frames=1024,
+    std::string rf_b_string = "clock=gpsdo,num_recv_frames=512,serial=31AE210"; //3125CAD //31AE210 num_recv_frames=512,
+
+    // std::string rf_a_string = "clock=gpsdo,type=x300,addr=192.168.40.2"; //3218D4C num_recv_frames=1024,
+    // std::string rf_b_string = "clock=gpsdo,type=x300,addr=192.168.30.2"; //3125CAD //31AE210 num_recv_frames=512,
+
+    strncpy(rfArgsCStr_a, rf_a_string.c_str(), 1024);
+    strncpy(rfArgsCStr_b, rf_b_string.c_str(), 1024);
+
+    if (srsran_rf_open_multi(&rf_a, rfArgsCStr_a, args.rf_nof_rx_ant)) { 
+      fprintf(stderr, "Error opening rf_a\n");
+      exit(-1);
+    }
+    if (srsran_rf_open_multi(&rf_b, rfArgsCStr_b, args.rf_nof_rx_ant)) {
+      fprintf(stderr, "Error opening rf_b\n");
       exit(-1);
     }
     /* Set receiver gain */
     if (args.rf_gain > 0) {
-      srsran_rf_set_rx_gain(&rf, args.rf_gain);
+      srsran_rf_set_rx_gain(&rf_a, args.rf_gain);
+      srsran_rf_set_rx_gain(&rf_b, 60);
     } else {
       printf("Starting AGC thread...\n");
-      if (srsran_rf_start_gain_thread(&rf, false)) {
-        ERROR("Error opening rf");
+      if (srsran_rf_start_gain_thread(&rf_a, false)) {
+        ERROR("Error opening rf_a");
         exit(-1);
       }
-      srsran_rf_set_rx_gain(&rf, srsran_rf_get_rx_gain(&rf));
-      cell_detect_config.init_agc = srsran_rf_get_rx_gain(&rf);
+      if (srsran_rf_start_gain_thread(&rf_b, false)) {
+        ERROR("Error opening rf_b");
+        exit(-1);
+      }
+      srsran_rf_set_rx_gain(&rf_a, srsran_rf_get_rx_gain(&rf_a));
+      srsran_rf_set_rx_gain(&rf_b, srsran_rf_get_rx_gain(&rf_b));
+      cell_detect_config.init_agc = srsran_rf_get_rx_gain(&rf_a);
     }
 
     /* set receiver frequency */
     if (sniffer_mode == UL_MODE && args.ul_freq != 0){
       printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
-      if (srsran_rf_set_rx_freq(&rf, 0, args.rf_freq + args.file_offset_freq)) {
+      if (srsran_rf_set_rx_freq(&rf_a, args.rf_nof_rx_ant, args.rf_freq + args.file_offset_freq)) {
         ///ERROR("Tunning DL Freq failed\n");
       }
       /*Uplink freg*/
       printf("Tunning UL receiver to %.3f MHz\n", (double) (args.ul_freq / 1000000));
-      if (srsran_rf_set_rx_freq(&rf, 1, args.ul_freq )){
+      if (srsran_rf_set_rx_freq(&rf_b, args.rf_nof_rx_ant, args.ul_freq )){
         //ERROR("Tunning UL Freq failed \n");
       }
-    } else if (sniffer_mode == UL_MODE && args.ul_freq == 0){
-      ERROR("Uplink Frequency must be defined in the UL Sniffer Mode \n");
-    } else if (sniffer_mode == DL_MODE && args.ul_freq == 0){
-      printf("Tunning receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
-      srsran_rf_set_rx_freq(&rf, args.rf_nof_rx_ant, args.rf_freq + args.file_offset_freq);
-    } else if (sniffer_mode == DL_MODE && args.ul_freq != 0){
-        ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode \n");
+    } else {
+      ERROR("This LTESniffer branch only supports UL Sniffing with 2 USRPs \n");
     }
 
     if (args.cell_search){
       uint32_t ntrial = 0;
       do {
-        ret = rf_search_and_decode_mib(
-            &rf, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo);
+        ret = rf_search_and_decode_mib_multi_usrp(
+            &rf_a, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo); //args.rf_nof_rx_ant
         if (ret < 0) {
           ERROR("Error searching for cell");
           exit(-1);
@@ -211,10 +247,13 @@ bool LTESniffer_Core::run(){
       cell.phich_length     = SRSRAN_PHICH_NORM;
       cell.phich_resources  = SRSRAN_PHICH_R_1_6;
     }
-    srsran_rf_stop_rx_stream(&rf);
-    // srsran_rf_flush_buffer(&rf);
+    srsran_rf_stop_rx_stream(&rf_a);
+    srsran_rf_stop_rx_stream(&rf_b);
+    srsran_rf_flush_buffer(&rf_a);
+    srsran_rf_flush_buffer(&rf_b);
     if (go_exit) {
-      srsran_rf_close(&rf);
+      srsran_rf_close(&rf_a);
+      srsran_rf_close(&rf_b);
       exit(0);
     }
 
@@ -222,8 +261,13 @@ bool LTESniffer_Core::run(){
     int srate = srsran_sampling_freq_hz(cell.nof_prb);
     if (srate != -1) {
       printf("Setting sampling rate %.2f MHz\n", (float)srate / 1000000);
-      float srate_rf = srsran_rf_set_rx_srate(&rf, (double)srate);
-      if (srate_rf != srate) {
+      float srate_rf_a = srsran_rf_set_rx_srate(&rf_a, (double)srate);
+      if (srate_rf_a != srate) {
+        ERROR("Could not set sampling rate");
+        exit(-1);
+      }
+      float srate_rf_b = srsran_rf_set_rx_srate(&rf_b, (double)srate);
+      if (srate_rf_b != srate) {
         ERROR("Could not set sampling rate");
         exit(-1);
       }
@@ -249,13 +293,13 @@ bool LTESniffer_Core::run(){
     char* tmp_filename = new char[args.input_file_name.length()+1];
     strncpy(tmp_filename, args.input_file_name.c_str(), args.input_file_name.length());
     tmp_filename[args.input_file_name.length()] = 0;
-    if (srsran_ue_sync_init_file_multi(&ue_sync,
+    if (srsran_ue_sync_init_file_multi(&ue_sync_a,
                                        args.nof_prb,
                                        tmp_filename,
                                        args.file_offset_time,
                                        args.file_offset_freq,
                                        args.rf_nof_rx_ant)) { //args.rf_nof_rx_ant
-      ERROR("Error initiating ue_sync");
+      ERROR("Error initiating ue_sync_a");
       exit(-1);
     }
     delete[] tmp_filename;
@@ -271,20 +315,37 @@ bool LTESniffer_Core::run(){
         decimate = args.decimate;
       }
     }
-    if (srsran_ue_sync_init_multi_decim(&ue_sync,
+    if (srsran_ue_sync_init_multi_usrp(&ue_sync_a,
                                         cell.nof_prb,
                                         cell.id == 1000,
+                                        srsran_rf_recv_multi_usrp_wrapper,
                                         srsran_rf_recv_wrapper,
-                                        args.rf_nof_rx_ant,
-                                        (void*)&rf,
+                                        2, //args.rf_nof_rx_ant
+                                        (void*)&rf_a,
+                                        (void*)&rf_b,
                                         decimate)) {
-      ERROR("Error initiating ue_sync");
+      ERROR("Error initiating ue_sync_a");
       exit(-1);
     }
-    if (srsran_ue_sync_set_cell(&ue_sync, cell)) {
-      ERROR("Error initiating ue_sync");
+    // if (srsran_ue_sync_init_multi_decim(&ue_sync_b,
+    //                                     cell.nof_prb,
+    //                                     cell.id == 1000,
+    //                                     srsran_rf_recv_wrapper,
+    //                                     1, //args.rf_nof_rx_ant
+    //                                     (void*)&rf_b,
+    //                                     decimate)) {
+    //   ERROR("Error initiating ue_sync_b");
+    //   exit(-1);
+    // }
+
+    if (srsran_ue_sync_set_cell(&ue_sync_a, cell)) {
+      ERROR("Error initiating ue_sync_a");
       exit(-1);
     }
+    // if (srsran_ue_sync_set_cell(&ue_sync_b, cell)) {
+    //   ERROR("Error initiating ue_sync_b");
+    //   exit(-1);
+    // }
 #endif
   }
 
@@ -296,11 +357,12 @@ bool LTESniffer_Core::run(){
 
   /*Get 1 worker from available list*/
   std::shared_ptr<SubframeWorker> cur_worker(phy->getAvail());
-  cf_t** cur_buffer = cur_worker->getBuffers();
+  cf_t** cur_buffer_a = cur_worker->getBuffers_a();
+  cf_t** cur_buffer_b = cur_worker->getBuffers_b();
 
   /* Config mib */
   srsran_ue_mib_t ue_mib;
-  if (srsran_ue_mib_init(&ue_mib, cur_buffer[0], cell.nof_prb)) {
+  if (srsran_ue_mib_init(&ue_mib, cur_buffer_a[0], cell.nof_prb)) {
     ERROR("Error initaiting UE MIB decoder");
     exit(-1);
   }
@@ -310,10 +372,10 @@ bool LTESniffer_Core::run(){
   }
 
   // Disable CP based CFO estimation during find
-  ue_sync.cfo_current_value       = search_cell_cfo / 15000;
-  ue_sync.cfo_is_copied           = true;
-  ue_sync.cfo_correct_enable_find = true;
-  srsran_sync_set_cfo_cp_enable(&ue_sync.sfind, false, 0);
+  ue_sync_a.cfo_current_value       = search_cell_cfo / 15000;
+  ue_sync_a.cfo_is_copied           = true;
+  ue_sync_a.cfo_correct_enable_find = true;
+  srsran_sync_set_cfo_cp_enable(&ue_sync_a.sfind, false, 0);
   
   ZERO_OBJECT(dl_sf);
   ZERO_OBJECT(pdsch_cfg);
@@ -327,21 +389,29 @@ bool LTESniffer_Core::run(){
 
 #ifndef DISABLE_RF
   if (args.input_file_name == "") {
-    srsran_rf_start_rx_stream(&rf, false);
+    srsran_rf_start_rx_stream(&rf_a, false);
+    srsran_rf_start_rx_stream(&rf_b, false);
   }
 #endif
 #ifndef DISABLE_RF
   if (args.rf_gain < 0 && args.input_file_name == "") {
-    srsran_rf_info_t* rf_info = srsran_rf_get_info(&rf);
-    srsran_ue_sync_start_agc(&ue_sync,
+    srsran_rf_info_t* rf_info_a = srsran_rf_get_info(&rf_a);
+    srsran_rf_info_t* rf_info_b = srsran_rf_get_info(&rf_b);
+    srsran_ue_sync_start_agc(&ue_sync_a,
                              srsran_rf_set_rx_gain_th_wrapper_,
-                             rf_info->min_rx_gain,
-                             rf_info->max_rx_gain,
+                             rf_info_a->min_rx_gain,
+                             rf_info_a->max_rx_gain,
                              static_cast<double>(cell_detect_config.init_agc));
+    // srsran_rf_info_t* rf_info_b = srsran_rf_get_info(&rf_b);
+    // srsran_ue_sync_start_agc(&ue_sync_b,
+    //                          srsran_rf_set_rx_gain_th_wrapper_,
+    //                          rf_info_b->min_rx_gain,
+    //                          rf_info_b->max_rx_gain,
+    //                          static_cast<double>(cell_detect_config.init_agc));
   }
 #endif
 
-  ue_sync.cfo_correct_enable_track = !args.disable_cfo;
+  ue_sync_a.cfo_correct_enable_track = !args.disable_cfo;
   srsran_pbch_decode_reset(&ue_mib.pbch);
 
   // Variables for measurements
@@ -362,22 +432,23 @@ bool LTESniffer_Core::run(){
 
     /* Set default verbose level */
     set_srsran_verbose_level(args.verbose);
-    ret = srsran_ue_sync_zerocopy(&ue_sync, cur_worker->getBuffers(), max_num_samples);
+    ret = srsran_ue_sync_zerocopy_multi_usrp(&ue_sync_a, cur_worker->getBuffers_a(), cur_worker->getBuffers_b(), max_num_samples);
     if (ret < 0) {
       if (args.input_file_name != ""){
         std::cout << "Finish reading from file" << std::endl;
       }
       ERROR("Error calling srsran_ue_sync_work()");
     }
-    // std:: cout << "CFO = " << srsran_ue_sync_get_cfo(&ue_sync) << std::endl;
+    // std:: cout << "CFO = " << srsran_ue_sync_get_cfo(&ue_sync_a) << std::endl;
 #ifdef CORRECT_SAMPLE_OFFSET
     float sample_offset =
-        (float)srsran_ue_sync_get_last_sample_offset(&ue_sync) + srsran_ue_sync_get_sfo(&ue_sync) / 1000;
+        (float)srsran_ue_sync_get_last_sample_offset(&ue_sync_a) + srsran_ue_sync_get_sfo(&ue_sync_a) / 1000;
     srsran_ue_dl_set_sample_offset(&ue_dl, sample_offset);
 #endif
 
     if (ret == 1){
-      uint32_t sf_idx = srsran_ue_sync_get_sfidx(&ue_sync);
+      uint32_t sf_idx = srsran_ue_sync_get_sfidx(&ue_sync_a);
+      // std::cout << "SF_idx: " << sf_idx << std::endl; 
       switch (state) {
         case DECODE_MIB:
           if (sf_idx == 0) {
@@ -387,6 +458,7 @@ bool LTESniffer_Core::run(){
             if (n < 0) {
               ERROR("Error decoding UE MIB");
               exit(-1);
+              std::cout << "Error decoding MIB" << std::endl;
             } else if (n == SRSRAN_UE_MIB_FOUND) {
               srsran_pbch_mib_unpack(bch_payload, &cell, &sfn);
               srsran_cell_fprint(stdout, &cell, sfn);
@@ -415,6 +487,7 @@ bool LTESniffer_Core::run(){
                   //disallow RNTI=0 for all formats
                 rntiManager.addForbidden(0x0, 0x0, f);
               }
+              start_recording = true;
             }
           }
           break;
@@ -451,6 +524,13 @@ bool LTESniffer_Core::run(){
           }
           break;
       }
+      // if (start_recording){
+      //   size_t nof_samples = SRSRAN_SF_LEN_PRB(cell.nof_prb);
+      //   cf_t *temp_ptr[2];
+      //   temp_ptr[0] = cur_worker->getBuffers_a()[0];
+      //   temp_ptr[1] = cur_worker->getBuffers_b()[0];
+      //   srsran_filesink_write_multi(&file_sink, reinterpret_cast<void**> (temp_ptr) ,nof_samples, 2);
+      // }
 
       /*increase system frame number*/
       if (sf_idx == 9) {
@@ -507,7 +587,7 @@ bool LTESniffer_Core::run(){
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
         state = DECODE_MIB;
-        if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers()[0], cell.nof_prb)) {
+        if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers_a()[0], cell.nof_prb)) {
           ERROR("Error initaiting UE MIB decoder");
           exit(-1);
         }
@@ -519,14 +599,14 @@ bool LTESniffer_Core::run(){
         nof_lost_sync = 0;
       }
       nof_lost_sync++;
-      cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
-              ", FrameCnt: " << ue_sync.frame_total_cnt <<
-              " State: " << ue_sync.state << endl;
+      cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync_a.sfind) <<
+              ", FrameCnt: " << ue_sync_a.frame_total_cnt <<
+              " State: " << ue_sync_a.state << endl;
     }
     sf_cnt++;
 
   } // main loop
-
+  srsran_filesink_free(&file_sink);
   /* Print statistic of 256tracking*/
   if (mcs_tracking_mode){
     switch (sniffer_mode)
@@ -548,16 +628,16 @@ bool LTESniffer_Core::run(){
 
   std::cout << "Destroyed Phy" << std::endl;
   if (args.input_file_name == ""){
-    srsran_rf_close(&rf);
+    srsran_rf_close(&rf_a);
     //srsran_ue_dl_free(falcon_ue_dl.q);
-    srsran_ue_sync_free(&ue_sync);
+    srsran_ue_sync_free(&ue_sync_a);
     srsran_ue_mib_free(&ue_mib);
   }
+  uhd_stop = true;
   //common->getRNTIManager().printActiveSet();
   cout << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
   //phy->getCommon().getRNTIManager().printActiveSet();
   //rnti_manager_print_active_set(falcon_ue_dl.rnti_manager);
-
   phy->getCommon().printStats();
   cout << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
   
@@ -570,6 +650,7 @@ bool LTESniffer_Core::run(){
 }
 
 void LTESniffer_Core::stop() {
+  uhd_stop = true;
   cout << "LTESniffer_Core: Exiting..." << endl;
   go_exit = true;
 }
@@ -586,20 +667,6 @@ LTESniffer_Core::~LTESniffer_Core(){
   // phy         = nullptr;
   printf("Deleted DL Sniffer core\n");
 }
-
-/*function to receive sample from SDR (usrp...)*/
-int srsran_rf_recv_wrapper( void* h,
-                            cf_t* data_[SRSRAN_MAX_PORTS], 
-                            uint32_t nsamples, 
-                            srsran_timestamp_t* t){
-  DEBUG(" ----  Receive %d samples  ----", nsamples);
-  void* ptr[SRSRAN_MAX_PORTS];
-  for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
-    ptr[i] = data_[i];
-  }
-  return srsran_rf_recv_with_time_multi((srsran_rf_t*)h, ptr, nsamples, true, NULL, NULL);
-}
-
 void LTESniffer_Core::setDCIConsumer(std::shared_ptr<SubframeInfoConsumer> consumer) {
   phy->getCommon().setDCIConsumer(consumer);
 }
@@ -635,4 +702,210 @@ void LTESniffer_Core::print_api_header(){
       std::cout << "-";
   }
   std::cout << std::endl;
+}
+
+/*function to receive sample from SDR (usrp...)*/
+int srsran_rf_recv_wrapper( void* h,
+                            cf_t* data_[SRSRAN_MAX_PORTS], 
+                            uint32_t nsamples, 
+                            srsran_timestamp_t* t){
+  DEBUG(" ----  Receive %d samples  ----", nsamples);
+  void* ptr[SRSRAN_MAX_PORTS];
+  for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
+    ptr[i] = data_[i];
+  }
+  return srsran_rf_recv_with_time_multi((srsran_rf_t*)h, ptr, nsamples, true, NULL, NULL);
+}
+
+int extractTimeSecond(time_t secs)
+{
+    struct tm* timeinfo;
+    timeinfo = localtime(&secs);
+    int seconds = timeinfo->tm_sec;
+    return seconds;
+}
+
+int srsran_rf_recv_multi_usrp_wrapper( void* rf_a,
+                                       void* rf_b,
+                                       cf_t* data_a[SRSRAN_MAX_PORTS],
+                                       cf_t* data_b[SRSRAN_MAX_PORTS], 
+                                       uint32_t nsamples, 
+                                       srsran_timestamp_t* t){
+  int ret = SRSRAN_ERROR;
+  void* ptr_a[SRSRAN_MAX_PORTS];
+  void* ptr_b[SRSRAN_MAX_PORTS];
+  for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
+    ptr_a[i] = data_a[i];
+    ptr_b[i] = data_b[i];
+  }
+  
+  uhd_stream_thread.prepare_stream_thread(rf_a, rf_b, nsamples, nsamples, ptr_a, ptr_b);
+  // PrintLifetime uhd_lifetime("UHD took: ");
+  {
+    std::unique_lock<std::mutex> lock_a(mtx_a);
+    std::unique_lock<std::mutex> lock_b(mtx_b);
+    a_triggered = true;
+    b_triggered = true;
+    cv.notify_all();
+  }
+
+  //wait until 2 threads finish
+  {
+      std::unique_lock<std::mutex> lock_a(mtx_a);
+      a_fn_cv.wait(lock_a, [] { return a_finished; });
+      a_finished = false;
+  }
+  {
+      std::unique_lock<std::mutex> lock_b(mtx_b);
+      b_fn_cv.wait(lock_b, [] { return b_finished; });
+      b_finished = false;
+  } 
+
+  //Check the received time of samples:
+  time_t rev_secs_a       = uhd_stream_thread.get_time_secs_a();
+  time_t rev_secs_b       = uhd_stream_thread.get_time_secs_b();
+  double rev_frac_secs_a  = uhd_stream_thread.get_time_frac_secs_a();
+  double rev_frac_secs_b  = uhd_stream_thread.get_time_frac_secs_b();
+  int time_sec_a          = extractTimeSecond(rev_secs_a);
+  int time_sec_b          = extractTimeSecond(rev_secs_b);
+  /*If time stamp from usrp a == usrp b in second resolution, but different in fraction of second */
+  if (time_sec_a == time_sec_b){
+    /*calculate the time difference*/
+    double diff_time = abs(rev_frac_secs_a - rev_frac_secs_b);
+    /*if the time difference higher than 1 micro second*/
+    if ((diff_time > 0.000001)){
+      /*Convert time difference to number of samples*/
+      int nof_offset_sample = diff_time * nsamples * 1000;
+      /*if the number of samples higher than max buffer*/
+      nof_offset_sample = (nof_offset_sample > LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE)? LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE:nof_offset_sample;
+      /*prepare dummy buffer to adjust samples*/
+      void* dummy_ptr[SRSRAN_MAX_PORTS];
+      for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
+        dummy_ptr[i] = uhd_dummy_buffer[i];
+      }
+      if (rev_frac_secs_a > rev_frac_secs_b){ //if usrp a is faster than usrp b
+        std::cout << "[USRP] Re-align samples from USRP B, " << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
+        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, dummy_ptr, nof_offset_sample, true, NULL, NULL);
+      }else{ // usrp b is faster than usrp a
+        std::cout << "[USRP] Re-align samples from USRP A, " << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
+        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, dummy_ptr, nof_offset_sample, true, NULL, NULL);
+      }
+    }
+  //if timestamp are different in many seconds, then adjust until they are equal in second
+  }else if ((time_sec_a != time_sec_b) && align_usrp){ 
+    int diff_time_sec = abs(time_sec_a - time_sec_b);
+    void* dummy_ptr[SRSRAN_MAX_PORTS];
+    for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
+      dummy_ptr[i] = uhd_dummy_buffer[i];
+    }
+    std::cout << "[USRP] Re-align samples in second = " << diff_time_sec << std::endl;
+    for (int dm_loop = 0; dm_loop < diff_time_sec*1000; dm_loop++){
+      if (time_sec_a > time_sec_b){ //adjust usrp b
+        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, dummy_ptr, nsamples, true, NULL, NULL);
+      }else{
+        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, dummy_ptr, nsamples, true, NULL, NULL);
+      }
+    }
+    align_usrp = false;
+  }
+
+  return SRSRAN_SUCCESS;
+}
+
+UhdStreamThread::UhdStreamThread(){
+  future_a = std::async(std::launch::async, [this](){
+      int th_ret;
+      pthread_t thread = pthread_self();
+      struct sched_param params;
+      params.sched_priority = 99; // Adjust the priority as needed
+      th_ret = pthread_setschedparam(thread, SCHED_FIFO, &params);
+      if (th_ret != 0) {
+          std::cerr << "Failed to set thread priority." << std::endl;
+      }      
+      this->get_data_stream_a();
+    });
+  future_b = std::async(std::launch::async, [this](){
+      int th_ret;
+      pthread_t thread = pthread_self();
+      struct sched_param params;
+      params.sched_priority = 99; // Adjust the priority as needed
+      th_ret = pthread_setschedparam(thread, SCHED_FIFO, &params);
+      if (th_ret != 0) {
+          std::cerr << "Failed to set thread priority." << std::endl;
+      }      
+      this->get_data_stream_b();
+    });
+}
+
+UhdStreamThread::~UhdStreamThread(){
+
+}
+
+void UhdStreamThread::run(){
+  // std::cout << "Getting IQ samples from USRPs " << std::endl;
+  // future_a = std::async(std::launch::async, [this](){
+  //     this->get_data_stream_a();
+  //   });
+  // future_b = std::async(std::launch::async, [this](){
+  //     this->get_data_stream_b();
+  //   });
+  // is_running = true;
+}
+
+void UhdStreamThread::prepare_stream_thread(void* rf_a_, void* rf_b_, int nsample_a, int nsample_b, void** ptr_a_, void** ptr_b_){
+  rf_a          = rf_a_;
+  rf_b          = rf_b_;
+  ptr_a         = ptr_a_;
+  ptr_b         = ptr_b_;
+  nof_sample_a  = nsample_a;
+  nof_sample_b  = nsample_b;
+}
+
+int UhdStreamThread::get_data_stream_a(){
+  while(!uhd_stop){
+    std::unique_lock<std::mutex> lock_a(mtx_a);
+    cv.wait(lock_a, [] { return a_triggered; });
+    a_triggered = false;
+    // std::cout << "nof_sample_a = " << nof_sample_a << std::endl;
+    srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, ptr_a, nof_sample_a, true, &secs_a, &frac_secs_a);
+    
+    {
+      a_finished = true;
+      a_fn_cv.notify_one();
+    }
+    lock_a.unlock();
+  }
+  return SRSRAN_SUCCESS;
+}
+
+int UhdStreamThread::get_data_stream_b(){
+  while(!uhd_stop){
+    std::unique_lock<std::mutex> lock_b(mtx_b);
+    cv.wait(lock_b, [] { return b_triggered; });
+    b_triggered = false;
+    // std::cout << "nof_sample_b = " << nof_sample_b << std::endl;
+    srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, ptr_b, nof_sample_b, true, &secs_b, &frac_secs_b);
+    
+    {
+      b_finished = true;
+      b_fn_cv.notify_one();
+    }
+  }
+  return SRSRAN_SUCCESS;
+}
+
+std::string UhdStreamThread::frac_sec_double_to_string(double value, int precision)
+{
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    std::string str = oss.str();
+
+    // Remove the decimal point
+    str.erase(std::remove(str.begin(), str.end(), '.'), str.end());
+
+    // Add leading zeros if necessary
+    int numZeros = precision - (str.length() - 1);
+    str = std::string(numZeros, '0') + str;
+    str = str.erase(0, 1);
+    return str;
 }

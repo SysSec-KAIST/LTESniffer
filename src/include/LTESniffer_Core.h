@@ -64,13 +64,13 @@ using namespace srsran;
 #define UL_SNIFFER_UL_MAX_OFFSET 200
 #define UL_SNIFFER_UL_OFFSET_32 32
 #define UL_SNIFFER_UL_OFFSET_64 64
+#define LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE (15 * 2048)
 
 typedef struct {
   cf_t* ta_temp_buffer;
   cf_t  ta_last_sample[UL_SNIFFER_UL_MAX_OFFSET];
   int   cnt =  0;
   int   sf_sample_size;
-
 } UL_Sniffer_ta_buffer_t;
 
 static SRSRAN_AGC_CALLBACK(srsran_rf_set_rx_gain_th_wrapper_)
@@ -82,6 +82,51 @@ int srsran_rf_recv_wrapper( void* h,
                             cf_t* data_[SRSRAN_MAX_PORTS], 
                             uint32_t nsamples, 
                             srsran_timestamp_t* t);
+
+int srsran_rf_recv_multi_usrp_wrapper( void* rf_a,
+                                       void* rf_b,
+                                       cf_t* data_a[SRSRAN_MAX_PORTS],
+                                       cf_t* data_b[SRSRAN_MAX_PORTS], 
+                                       uint32_t nsamples, 
+                                       srsran_timestamp_t* t);
+
+class UhdStreamThread{
+public:
+  UhdStreamThread();
+  ~UhdStreamThread();
+
+  void prepare_stream_thread(void* rf_a_, void* rf_b_, int nsample_a, int nsample_b, void** ptr_a_, void** ptr_b_);
+  int get_data_stream_a();
+  int get_data_stream_b();
+  void run();
+  std::string frac_sec_double_to_string(double value, int precision);  
+  bool check_running(){return is_running;}
+  time_t get_time_secs_a(){return secs_a;}
+  time_t get_time_secs_b(){return secs_b;}
+  double get_time_frac_secs_a(){return frac_secs_a;}
+  double get_time_frac_secs_b(){return frac_secs_b;}
+  void   set_nof_adjust_sample(int sample) { nof_adjust_sample = sample;}
+  int    get_nof_adjust_sample(){ return nof_adjust_sample;}
+  int    get_adjust_type(){return adjust_ab;}
+  void   set_adjust_type(int type){ adjust_ab = type;}
+private:
+  int adjust_ab = 0; // 0: no, 1: a, 2: b
+  int nof_adjust_sample = 0;
+  int nof_sample_a = 0;
+  int nof_sample_b = 0;
+  bool is_running = false;
+  void* rf_a = nullptr;
+  void* rf_b = nullptr;
+  void** ptr_a = nullptr;
+  void** ptr_b = nullptr;
+  time_t secs_a = 0;
+  double frac_secs_a = 0;
+  time_t secs_b = 0;
+  double frac_secs_b = 0;
+  int   nsamples = 0;
+  std::future<void> future_a;
+  std::future<void> future_b;
+};
 
 class LTESniffer_Core : public SignalHandler {
 public:
@@ -120,4 +165,5 @@ private:
   UL_HARQ                 ul_harq; // test UL_HARQ
   HARQ                    harq; // test HARQ function
   int                     harq_mode;
+  srsran_filesink_t file_sink = {};
 };
