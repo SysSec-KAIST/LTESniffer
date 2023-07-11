@@ -136,6 +136,27 @@ int DCISearch::inspect_dci_location_recursively(srsran_dci_msg_t *dci_msg,
 #ifdef PRINT_ALL_CANDIDATES
       printf("Cand. %d (sfn %d.%d, ncce %d, L %d, f_idx %d)\n", &cand[format_idx].rnti, sfn, sf_idx, ncce, L, format_idx);
 #endif
+      if (rntiManager.getActivationReason(cand[format_idx].rnti) == RM_ACT_RAR && cand[format_idx].dci_msg.format == 0){
+        ltesniffer_accepted_dci_t temp_dci;
+        temp_dci.rnti   = cand[format_idx].rnti;
+        temp_dci.L      = L;
+        temp_dci.ncce   = ncce;
+        temp_dci.format = cand[format_idx].dci_msg.format;
+        temp_dci.cand   = cand[format_idx];
+        temp_dci.added  = false;
+        bool add_to_temp_list = true;
+        for (auto dci_member:temp_dci0)
+        {
+          if (dci_member.format == cand[format_idx].dci_msg.format && dci_member.rnti == cand[format_idx].rnti && dci_member.ncce == ncce){
+            add_to_temp_list = false;
+          }
+        }
+        if (add_to_temp_list){
+          temp_dci0.push_back(temp_dci);
+          // printf("[DCI] sfn %d.%d, Accept DCI 0 to cand list. %d , ncce %d, L %d, fm: %d)\n",sfn, sf_idx, cand[format_idx].rnti, ncce, L, cand[format_idx].dci_msg.format);                                                                                  
+        }
+      }
+
       if(result != SRSRAN_SUCCESS) {
         ERROR("Error calling srsran_pdcch_decode_msg_limit_avg_llr_power\n");
       }
@@ -161,6 +182,10 @@ int DCISearch::inspect_dci_location_recursively(srsran_dci_msg_t *dci_msg,
           (cand[format_idx].rnti < SRSRAN_RARNTI_END)) {
         if(meta_formats[format_idx]->format==SRSRAN_DCI_FORMAT1A) {
           INFO("Found RA-RNTI: 0x%x\n", cand[format_idx].rnti);
+          falcon_ue_dl.current_rnti = cand[format_idx].rnti;
+        }
+        else if(meta_formats[format_idx]->format==SRSRAN_DCI_FORMAT1C){
+          // printf("Found 1C RA-RNTI: 0x%x\n", cand[format_idx].rnti); //T_note
           falcon_ue_dl.current_rnti = cand[format_idx].rnti;
         }
         else {
@@ -374,9 +399,38 @@ int DCISearch::inspect_dci_location_recursively(srsran_dci_msg_t *dci_msg,
       // finally, process the accepted DCI
       // adopt new DL Sniffer
       cand[hist_max_format_idx].dci_msg.rnti = cand[hist_max_format_idx].rnti;
+      bool add_dci = true;
       if (cand[hist_max_format_idx].rnti != 0){
-        dciCollection.addCandidate(cand[hist_max_format_idx], srsran_dci_location_t{L_disamb, ncce}, hist_max_format_value,
-                                                                                                  sf, &ue_dl_cfg->cfg.dci);
+        if (cand[hist_max_format_idx].dci_msg.format == 0){
+          for (auto dci0_mem:temp_dci0){
+            //if adding DCI0 is in temp list, not add in this step, add in step 2
+            if (dci0_mem.format == cand[hist_max_format_idx].dci_msg.format && dci0_mem.rnti == cand[hist_max_format_idx].rnti && dci0_mem.ncce == ncce){
+              add_dci = false;
+            }
+          }
+          if (add_dci){
+            // printf("[DCI1] sfn %d.%d, Accept DCI 0 to cand list. %d , ncce %d, L %d, f_idx %d)\n",sfn, sf_idx, cand[hist_max_format_idx].rnti, ncce, L, cand[hist_max_format_idx].dci_msg.format);                                                                                  
+            dciCollection.addCandidate(cand[hist_max_format_idx], srsran_dci_location_t{L_disamb, ncce}, hist_max_format_value,
+                                                                                                      sf, &ue_dl_cfg->cfg.dci);
+          }
+        }else{
+          // printf("[DCI2] sfn %d.%d, Accept DCI 0 to cand list. %d , ncce %d, L %d, f_idx %d)\n",sfn, sf_idx, cand[hist_max_format_idx].rnti, ncce, L, cand[hist_max_format_idx].dci_msg.format);                                                                                  
+          dciCollection.addCandidate(cand[hist_max_format_idx], srsran_dci_location_t{L_disamb, ncce}, hist_max_format_value,
+                                                                                                    sf, &ue_dl_cfg->cfg.dci);
+        }
+        //step 2: add all DCI0 in temp list to final dci collector
+        for (auto dci0_mem:temp_dci0){
+          // printf("nof_dci = %d \n", temp_dci0.size());
+          // printf("[DCI3] sfn %d.%d, Accept DCI 0 to cand list. %d , ncce %d, L %d, f_idx %d)\n",sfn, sf_idx, dci0_mem.rnti, dci0_mem.ncce, dci0_mem.L, dci0_mem.format);                                                                                  
+          unsigned int temp_hist_max_format_value = rntiManager.getFrequency(dci0_mem.rnti, dci0_mem.format);
+          // Prevent adding multiple times
+          if (dci0_mem.added == false){
+            dciCollection.addCandidate(dci0_mem.cand, srsran_dci_location_t{dci0_mem.L, dci0_mem.ncce}, temp_hist_max_format_value,
+                                                                                                      sf, &ue_dl_cfg->cfg.dci);
+            dci0_mem.added = true;
+          }
+        }
+        temp_dci0.clear(); //clear all member after added
       }
 
       // cleanup and return
@@ -514,6 +568,7 @@ int DCISearch::search() {
   float snr_db = falcon_ue_dl.q->chest_res.snr_db;
   if (snr_db > 6.0){
     //PrintLifetime lt(test_string + "DCI Blind Search: ");
+    temp_dci0.clear();
     recursive_blind_dci_search(&dci_msg, sf->cfi);
     ret = SRSRAN_SUCCESS;
   }

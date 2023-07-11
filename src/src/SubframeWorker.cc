@@ -297,7 +297,7 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
       /*Get Uplink and Downlink dci and grant lists*/
       std::vector<DCI_UL> dci_ul = subframeInfo.getDCICollection().getULSnifferDCI_UL();            // get UL DCI0 list
       std::vector<DL_Sniffer_DCI_DL> dci_dl = subframeInfo.getDCICollection().getDLSnifferDCI_DL(); // get DL DCI list
-
+      
       /*UL grant for RRC Connection Request is sent in RAR response (msg 2),
       / so convert UL grant from msg2 to general UL grant*/
       std::vector<DCI_UL> rar_dci_ul_vector;
