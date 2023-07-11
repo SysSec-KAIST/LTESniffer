@@ -68,7 +68,11 @@ sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <U
 
 **Using Octoclock**
 
-Using Octoclock with multiple USRPs seems to have a worse synchronization than using GPSDO (based on our experiments). Therefore, it is recommended to use GPSDO at this time. The synchronization of using Octoclock will be tested more and the result will be updated in the next version. 
+Using Octoclock with multiple USRPs seems to have a worse synchronization than using GPSDO (based on our experiments). Therefore, it is recommended to use GPSDO at this time. The synchronization of using Octoclock will be tested more and the result will be updated in the next version.
+
+**Limitation**
+
+When employing multiple USRP B-series units for uplink sniffing mode, the success rate and DCI detection tend to be lower, reaching around 80%, in comparison to using a single USRP X310. This discrepancy can be attributed to several reasons. Firstly, despite LTESniffer utilizing GPSDO, the synchronization between uplink and downlink channels is not as efficient as when utilizing a single USRP X310. Secondly, the USRP X310 outperforms the USRP B210 in terms of RF front-end capabilities. Therefore, for the best performance, we strongly recommend using USRP X310 for uplink sniffing mode. 
 
 ### Output of LTESniffer
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.
