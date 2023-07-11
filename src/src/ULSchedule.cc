@@ -109,9 +109,9 @@ void ULSchedule::set_SIB2(asn1::rrc::sib_type2_s *sib2_)
 	lock.unlock();
 }
 
-uint32_t ULSchedule::get_ul_tti(uint32_t cur_tti)
+int ULSchedule::get_ul_tti(uint32_t cur_tti)
 {
-	uint32_t temp_tti = cur_tti - 4;
+	int temp_tti = (int)cur_tti - 4;
 	if (temp_tti >= 0)
 	{
 		return temp_tti;
@@ -123,9 +123,9 @@ uint32_t ULSchedule::get_ul_tti(uint32_t cur_tti)
 	}
 }
 
-uint32_t ULSchedule::get_rar_ul_tti(uint32_t cur_tti)
+int ULSchedule::get_rar_ul_tti(uint32_t cur_tti)
 {
-	uint32_t temp_tti = cur_tti - 6;
+	int temp_tti = (int)cur_tti - 6;
 	if (temp_tti >= 0)
 	{
 		return temp_tti;

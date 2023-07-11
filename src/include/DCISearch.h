@@ -5,6 +5,16 @@
 #include "PhyCommon.h"
 #include "MetaFormats.h"
 #include "falcon/prof/Lifetime.h"
+
+typedef struct SRSRAN_API{
+    uint16_t                    rnti  = 0;
+    uint32_t                    L     = -1;
+    uint32_t                    ncce  = -1;
+    int                         format = -1;
+    dci_candidate_t             cand = {};
+    bool                        added = false;
+} ltesniffer_accepted_dci_t;
+
 class DCISearch {
 public:
     DCISearch(falcon_ue_dl_t& ue_dl,
@@ -49,4 +59,5 @@ private:
     uint32_t sfn;
     DCIBlindSearchStats stats;
     bool enableShortcutDiscovery;
+    std::vector<ltesniffer_accepted_dci_t> temp_dci0;
 };

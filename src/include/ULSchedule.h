@@ -74,8 +74,8 @@ public:
     void                 delete_rar_ULSche(uint32_t tti);
     std::vector<DCI_UL>* getULSche(uint32_t tti);
     std::vector<DCI_UL>* get_rar_ULSche(uint32_t tti);
-    uint32_t             get_ul_tti(uint32_t cur_tti);
-    uint32_t             get_rar_ul_tti(uint32_t cur_tti);
+    int                  get_ul_tti(uint32_t cur_tti);
+    int                  get_rar_ul_tti(uint32_t cur_tti);
 
     void                 set_config();
     bool                 get_config()                    {return  config;   }

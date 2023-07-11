@@ -13,13 +13,18 @@ Please refer to our [paper][paper] for more details.
 ## LTESniffer in layman's terms
 LTESniffer is a tool that can capture the LTE wireless messages that are sent between a cell tower and smartphones connected to it. LTESniffer supports capturing the messages in both directions, from the tower to the smartphones, and from the smartphones back to the cell tower.
 
-LTESniffer can **NOT DECRYPT** encrypted messages between the cell tower and smartphones. It can be used for analyzing unencrypted parts of the communication between the cell tower and smartphones. For example, for encrypted messages, it can allow the user to analyze unencrypted parts, such as headers in MAC and physical layers. However, those messages sent in plaintext can be completely analyzable. For example, the broadcast messages sent by the cell tower, or the messages at the beginning of the connection are completely visible.
+LTESniffer **CANNOT DECRYPT** encrypted messages between the cell tower and smartphones. It can be used for analyzing unencrypted parts of the communication between the cell tower and smartphones. For example, for encrypted messages, it can allow the user to analyze unencrypted parts, such as headers in MAC and physical layers. However, those messages sent in plaintext can be completely analyzable. For example, the broadcast messages sent by the cell tower, or the messages at the beginning of the connection are completely visible.
 
 ## Ethical Consideration
 
 The main purpose of LTESniffer is to support security and analysis research on the cellular network. Due to the collection of uplink-downlink user data, any use of LTESniffer must follow the local regulations on sniffing the LTE traffic. We are not responsible for any illegal purposes such as intentionally collecting user privacy-related information.
 
 ## Features
+### New Update
+- Supports two USRP B-series for uplink sniffing mode. Please refer to `LTESniffer-multi-usrp` branch and its [README][multi-readme] for more details.
+- Improved the DCI 0 detected in uplink.
+- Fixed some bugs.
+
 LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][srsran] library. LTESniffer supports:
 - Real-time decoding LTE uplink-downlink control-data channels: PDCCH, PDSCH, PUSCH
 - LTE Advanced and LTE Advanced Pro, up to 256QAM in both uplink and downlink
@@ -33,7 +38,7 @@ LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][s
 
 ## Hardware and Software Requirement
 ### OS Requirement
-Currently, LTESniffer works stably on Ubuntu 18.04/20.04.
+Currently, LTESniffer works stably on Ubuntu 18.04/20.04/22.04.
 
 ### Hardware Requirement
 Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores. Especially when the base station has many active users during the peak hour. LTESniffer was able to achieve real-time decoding when running on an Intel i7-9700K PC to decode traffic on a base station with 150 active users.
@@ -43,11 +48,11 @@ Achieving real-time decoding of LTE traffic requires a high-performance CPU with
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer requires USRP X310 with 2 daughterboards, especially when sniffing the uplink traffic. This is because sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Also, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. The function might not work with USRP X310 equipped with a single TwinRX daughterboard. The USRP X310 should be equipped with GPSDO to maintain stable synchronization. Additionally, two RX antennas are required to enable LTESniffer to decode downlink messages in transmission modes 3 and 4. 
+Currently, LTESniffer supports a single USRP X310 or two USRP B-series to sniff uplink traffic. For using two USRP B-series, please refer to `LTESniffer-multi-usrp` branch and its [README][multi-readme].
 
-To sniff only downlink traffic from the base station, one can operate LTESniffer with USRP B210 which is connected to PC via a USB 3.0 port. Similarly, USRB B210 should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
+To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). The SDR should be connected to the PC via a USB 3.0 port. Also, it should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
 ## Installation
-**Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04/20.04.**
+**Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04/20.04/22.04.**
 
 **Dependencies**
 - **Important dependency**: [UHD][uhd] library version >= 4.0 must be installed in advance (recommend building from source). The following steps can be used on Ubuntu 18.04. Refer to UHD Manual for full installation guidance. 
@@ -185,8 +190,6 @@ To enable the WireShark to analyze the decoded packets correctly, please refer t
 **Note:** The uplink pcap file contains both uplink and downlink messages. On the WireShark, use this filter to monitor only uplink messages: ``mac-lte.direction == 0``; or this filter to monitor only downlink messages: ``mac-lte.direction == 1``.
 
 ## Application Note
-### Uplink sniffing mode
-When sniffing LTE uplink, LTESniffer requires USRP X310 because it needs to listen to two different frequencies at the same time, 1 for uplink and 1 for downlink. The main target of the uplink sniffing function is to decode uplink traffic from nearby smartphones. However, as LTESniffer needs to decode the downlink traffic to obtain uplink-downlink DCI messages, it also supports decoding downlink traffic at the same time. Nevertheless, the downlink sniffing function is limited to decoding messages which use transmission modes 1 and 2, since LTESniffer only has 1 antenna for downlink.
 ### Distance for uplink sniffing
 The effective range for sniffing uplink is limited in LTESniffer due to the capability of the RF front-end of the hardware (i.e. SDR). The uplink signal power from UE is significantly weaker compared to the downlink signal because UE is a handheld device that optimizes battery usage, while the eNB uses sufficient power to cover a large area. To successfully capture the uplink traffic, LTESniffer can increase the strength of the signal power by i) being physically close to the UE, or ii) improving the signal reception capability with specialized hardware, such as a directional antenna, dedicated RF front-end, and signal amplifier.
 ### The information displayed on the terminal
@@ -231,9 +234,9 @@ Please refer to our [paper][paper] for more details.
 ```
 ## FAQ
 
-**Q:** What kind of SDRs I can use to run LTESniffer? \
+<!-- **Q:** What kind of SDRs I can use to run LTESniffer? \
 **A:** To sniff only downlink traffic from the base station, LTESniffer works well with USRP B210 with 2 RX antennas.
-To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards. There are two reasons for this. First, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be simply achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Second, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies.
+To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards. There are two reasons for this. First, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be simply achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Second, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. -->
 
 **Q:** Is it mandatory to use GPSDO with the USRP in order to run LTESniffer? \
 **A:** GPSDO is useful for more stable synchronization. However, without GPSDO, LTESniffer still can synchronize with the LTE signal to decode the packets. 
@@ -257,3 +260,4 @@ To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards
 [pcap]:   pcap_file_example/README.md
 [app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
 [watching]: https://syssec.kaist.ac.kr/pub/2022/sec22summer_bae.pdf
+[multi-readme] https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-multi-usrp
