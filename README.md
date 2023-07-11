@@ -13,6 +13,7 @@ Please refer to our [paper][paper] for more details.
 ## Guidline for setting up multiple USRP B210s for uplink sniffing mode
 ### Hardware Requirement
 Using multiple USRPs for uplink sniffing mode requires a higher computation cost than using a single USRP X310. This is because LTESniffer needs to process multiple data streams from multiple USRPs. Therefore, it is recommended to use a powerful CPU to execute LTESniffer when using multiple USRPs.
+
 **The following hardware is recommended**
 - Intel i7 CPU with at least 8 physical cores (in our experiments, we used i7-9700K with 8 physical cores)
 - At least 16Gb RAM
@@ -35,11 +36,13 @@ make -j4 (use 4 threads)
 
 ### Make your SDR ready
 After building the project the first time, please find out the serial number of your USRP B210s and modify that information in the source file `src/src/LTESniffer_Core.cc`.
+
 **Find out the serial number of USRP**
 ```bash
 uhd_find_devices
 ```
 **Modify source file `LTESniffer_Core.cc`**
+
 In the source file `LTESniffer_Core.cc`, please look at line `178` and `179`:
 ```
 std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,serial=XXXXXXX";
@@ -51,6 +54,7 @@ cd ~/LTESniffer/build/
 make -j4
 ```
 **Make sure that GPSDOs in both USRP B210 are locked**
+
 LTESniffer requires GPSDO in both B210 to be locked before it can decode uplink signal correctly.
 To obtain that, please run LTESniffer the first time, wait until it does the cell search, stop it in the middle, and wait until the GPSDOs are locked. There is a led next to the GPSDO port of B210 which indicates GPSDO is locked when it is lighted up.
 ```bash
@@ -61,6 +65,9 @@ Once GPSDOs are locked, you can run LTESniffer to decode uplink packets.
 ```bash
 sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <UL Freq> -C -m 1
 ```
+
+**Using Octoclock**
+Using Octoclock with multiple USRPs seems to have a worse synchronization than using GPSDO (based on our experiments). Therefore, it is recommended to use GPSDO at this time. The synchronization of using Octoclock will be tested more and the result will be updated in the next version. 
 
 ### Output of LTESniffer
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.
