@@ -19,7 +19,7 @@ Using multiple USRPs for uplink sniffing mode requires a higher computation cost
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer only supports 2 USRP B210 (B200 is on testing and will be updated soon). The USRP B210 **MUST** be equipped with GPSDO, because LTESniffer requires highly precise synchronization between 2 B210, which can be achieved by using GPSDO. Other SDRs have not been tested. Note that it is nearly impossible to operate LTESniffer in uplink sniffing mode without GPSDO.
+Currently, multiple USRP function of LTESniffer only supports 2 USRP B210s (B200 is on testing and will be updated soon). The USRP B210s **MUST** be equipped with GPSDO, because LTESniffer requires highly precise synchronization between 2 B210s, which can be achieved by using GPSDO. Other SDRs have not been tested. Note that it is nearly impossible to operate LTESniffer in uplink sniffing mode without GPSDO.
 
 ### Installation
 The Dependencies and initial setup are similar to when using a single USRP device, please refer to [main branch README][main-readme].
