@@ -10,7 +10,7 @@ a passive sniffer that can capture privacy-related packets on the air. However, 
 
 Please refer to our [paper][paper] for more details.
 
-## Guidline for setting up multiple USRP B210s for uplink sniffing mode
+## Guideline for setting up multiple USRP B210s for uplink sniffing mode
 ### Hardware Requirement
 Using multiple USRPs for uplink sniffing mode requires a higher computation cost than using a single USRP X310. This is because LTESniffer needs to process multiple data streams from multiple USRPs. Therefore, it is recommended to use a powerful CPU to execute LTESniffer when using multiple USRPs.
 
@@ -97,4 +97,4 @@ Please refer to our [paper][paper] for more details.
 [pcap]:   pcap_file_example/README.md
 [app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
 [watching]: https://syssec.kaist.ac.kr/pub/2022/sec22summer_bae.pdf
-[main-readne]: https://github.com/SysSec-KAIST/LTESniffer/tree/main
+[main-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/main
