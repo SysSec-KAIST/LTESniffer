@@ -15,11 +15,11 @@ Please refer to our [paper][paper] for more details.
 Using multiple USRPs for uplink sniffing mode requires a higher computation cost than using a single USRP X310. This is because LTESniffer needs to process multiple data streams from multiple USRPs. Therefore, it is recommended to use a powerful CPU to execute LTESniffer when using multiple USRPs.
 
 **The following hardware is recommended**
-- Intel i7 CPU with at least 8 physical cores (in our experiments, we used i7-9700K with 8 physical cores)
+- A single PC with Intel i7 CPU with at least 8 physical cores (in our experiments, we used i7-9700K with 8 physical cores)
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer only supports 2 USRP B210 (B200 is on testing and will be updated soon). The USRP B210 **MUST** be equipped with GPSDO, because LTESniffer requires highly precise synchronization between 2 B210, which can be achieved by using GPSDO. Other SDRs have not been tested.
+Currently, LTESniffer only supports 2 USRP B210 (B200 is on testing and will be updated soon). The USRP B210 **MUST** be equipped with GPSDO, because LTESniffer requires highly precise synchronization between 2 B210, which can be achieved by using GPSDO. Other SDRs have not been tested. Note that it is nearly impossible to operate LTESniffer in uplink sniffing mode without GPSDO.
 
 ### Installation
 The Dependencies and initial setup are similar to when using a single USRP device, please refer to [main branch README][main-readme].
