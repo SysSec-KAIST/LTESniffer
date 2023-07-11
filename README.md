@@ -67,6 +67,7 @@ sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <U
 ```
 
 **Using Octoclock**
+
 Using Octoclock with multiple USRPs seems to have a worse synchronization than using GPSDO (based on our experiments). Therefore, it is recommended to use GPSDO at this time. The synchronization of using Octoclock will be tested more and the result will be updated in the next version. 
 
 ### Output of LTESniffer
