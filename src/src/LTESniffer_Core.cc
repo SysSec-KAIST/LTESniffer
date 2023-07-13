@@ -320,7 +320,7 @@ bool LTESniffer_Core::run(){
                                         cell.id == 1000,
                                         srsran_rf_recv_multi_usrp_wrapper,
                                         srsran_rf_recv_wrapper,
-                                        2, //args.rf_nof_rx_ant
+                                        args.rf_nof_rx_ant, //args.rf_nof_rx_ant
                                         (void*)&rf_a,
                                         (void*)&rf_b,
                                         decimate)) {
