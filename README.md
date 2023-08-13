@@ -48,9 +48,14 @@ Achieving real-time decoding of LTE traffic requires a high-performance CPU with
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer supports a single USRP X310 or two USRP B-series to sniff uplink traffic. For using two USRP B-series, please refer to `LTESniffer-multi-usrp` branch and its [README][multi-readme].
+LTESniffer requires different SDR for its uplink and downlink sniffing modes.
 
 To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). The SDR should be connected to the PC via a USB 3.0 port. Also, it should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
+
+On the other hand, to sniff uplink traffic from smartphones to base stations, LTESniffer needs to listen to two different frequencies (Uplink and Downlink) concurrently. To solve this problem, LTESniffer supports two options:
+- Using a single USRP X310. USRP X310 has two Local Oscillators (LOs) for 2 RX channels, which can turn each RX channel to a distinct Uplink/Downlink frequency. To use this option, please refer to the `main` branch of LTESniffer.
+- Using 2 USRP B-Series. LTESniffer utilizes 2 USRP B-series (B210/B200) for uplink and downlink separately. It achieves synchronization between 2 USRPs by using GPSDO for clock source and time reference. To use this option, please refer to the `LTESniffer-multi-usrp` branch of LTESniffer and its [README][multi-readme].
+
 ## Installation
 **Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04/20.04/22.04.**
 
@@ -239,7 +244,7 @@ Please refer to our [paper][paper] for more details.
 To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards. There are two reasons for this. First, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be simply achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Second, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. -->
 
 **Q:** Is it mandatory to use GPSDO with the USRP in order to run LTESniffer? \
-**A:** GPSDO is useful for more stable synchronization. However, without GPSDO, LTESniffer still can synchronize with the LTE signal to decode the packets. 
+**A:** GPSDO is useful for more stable synchronization. However, for downlink sniffing mode, LTESniffer still can synchronize with the LTE signal to decode the packets without GPSDO. For uplink sniffing mode, GPSDO is only required when using 2 USRP B-series, as it is the time and clock reference sources for synchrozation between uplink and downlink channels. Another uplink SDR option, using a single USRP X310, does not require GPSDO.
 
 **Q:** For downlink traffic, can I use a cheaper SDR? \
 **A:** Technically, any SDRs supported by srsRAN library such as Blade RF can be used to run LTESniffer in the downlink sniffing mode. However, we only tested the downlink sniffing function of LTESniffer with USRP B210 and X310. 
