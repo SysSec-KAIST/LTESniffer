@@ -40,6 +40,8 @@
 #include <boost/program_options/parsers.hpp>
 #include "srsue/hdr/ue.h"
 #include "falcon/prof/Lifetime.h"
+#include <thread>
+#include <chrono>
 
 using namespace srsue;
 namespace bpo = boost::program_options;
@@ -124,8 +126,8 @@ private:
   time_t secs_b = 0;
   double frac_secs_b = 0;
   int   nsamples = 0;
-  std::future<void> future_a;
-  std::future<void> future_b;
+  std::future<int> future_a;
+  std::future<int> future_b;
 };
 
 class LTESniffer_Core : public SignalHandler {

@@ -47,6 +47,7 @@ bool a_triggered = false;
 bool b_triggered = false;
 bool a_finished = false;
 bool b_finished = false;
+uint32_t nof_sf = 0;
 UhdStreamThread uhd_stream_thread;  //control multiple uhd threads
 
 LTESniffer_Core::LTESniffer_Core(const Args& args):
@@ -175,16 +176,17 @@ bool LTESniffer_Core::run(){
     printf("Opening RF device with %d RX antennas...\n", args.rf_nof_rx_ant);
     char rfArgsCStr_a[1024];
     char rfArgsCStr_b[1024];
-    std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,serial=3218D4C"; //3218D4C num_recv_frames=1024,
-    std::string rf_b_string = "clock=gpsdo,num_recv_frames=512,serial=31AE210"; //3125CAD //31AE210 num_recv_frames=512,
+    std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,recv_frame_size=8000,serial=3113D1B"; 
+    std::string rf_b_string = "clock=gpsdo,num_recv_frames=512,recv_frame_size=8000,serial=3125CB5";
 
-    // std::string rf_a_string = "clock=gpsdo,type=x300,addr=192.168.40.2"; //3218D4C num_recv_frames=1024,
-    // std::string rf_b_string = "clock=gpsdo,type=x300,addr=192.168.30.2"; //3125CAD //31AE210 num_recv_frames=512,
+    /*The following strings are for USRP X310 for specific application*/
+    // std::string rf_a_string = "clock=gpsdo,type=x300,addr=192.168.40.2";
+    // std::string rf_b_string = "clock=gpsdo,type=x300,addr=192.168.30.2";
 
     strncpy(rfArgsCStr_a, rf_a_string.c_str(), 1024);
     strncpy(rfArgsCStr_b, rf_b_string.c_str(), 1024);
 
-    if (srsran_rf_open_multi(&rf_a, rfArgsCStr_a, args.rf_nof_rx_ant)) { 
+    if (srsran_rf_open_multi(&rf_a, rfArgsCStr_a, args.rf_nof_rx_ant)) {  //args.rf_nof_rx_ant
       fprintf(stderr, "Error opening rf_a\n");
       exit(-1);
     }
@@ -195,7 +197,7 @@ bool LTESniffer_Core::run(){
     /* Set receiver gain */
     if (args.rf_gain > 0) {
       srsran_rf_set_rx_gain(&rf_a, args.rf_gain);
-      srsran_rf_set_rx_gain(&rf_b, 60);
+      srsran_rf_set_rx_gain(&rf_b, args.rf_gain);
     } else {
       printf("Starting AGC thread...\n");
       if (srsran_rf_start_gain_thread(&rf_a, false)) {
@@ -230,7 +232,7 @@ bool LTESniffer_Core::run(){
       uint32_t ntrial = 0;
       do {
         ret = rf_search_and_decode_mib_multi_usrp(
-            &rf_a, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo); //args.rf_nof_rx_ant
+            &rf_a, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo);
         if (ret < 0) {
           ERROR("Error searching for cell");
           exit(-1);
@@ -249,11 +251,19 @@ bool LTESniffer_Core::run(){
     }
     srsran_rf_stop_rx_stream(&rf_a);
     srsran_rf_stop_rx_stream(&rf_b);
-    srsran_rf_flush_buffer(&rf_a);
-    srsran_rf_flush_buffer(&rf_b);
     if (go_exit) {
-      srsran_rf_close(&rf_a);
-      srsran_rf_close(&rf_b);
+      uhd_stop = true;
+      if (a_triggered == false){
+        std::unique_lock<std::mutex> lock_a(mtx_a);
+        a_triggered = true;
+      }
+      if (b_triggered == false){
+        std::unique_lock<std::mutex> lock_b(mtx_b);
+        b_triggered = true;
+      }
+      cv.notify_all();
+      // srsran_rf_close(&rf_a);
+      // srsran_rf_close(&rf_b);
       exit(0);
     }
 
@@ -320,7 +330,7 @@ bool LTESniffer_Core::run(){
                                         cell.id == 1000,
                                         srsran_rf_recv_multi_usrp_wrapper,
                                         srsran_rf_recv_wrapper,
-                                        2, //args.rf_nof_rx_ant
+                                        args.rf_nof_rx_ant, //args.rf_nof_rx_ant
                                         (void*)&rf_a,
                                         (void*)&rf_b,
                                         decimate)) {
@@ -389,10 +399,11 @@ bool LTESniffer_Core::run(){
 
 #ifndef DISABLE_RF
   if (args.input_file_name == "") {
-    srsran_rf_start_rx_stream(&rf_a, false);
     srsran_rf_start_rx_stream(&rf_b, false);
+    srsran_rf_start_rx_stream(&rf_a, false);
   }
 #endif
+
 #ifndef DISABLE_RF
   if (args.rf_gain < 0 && args.input_file_name == "") {
     srsran_rf_info_t* rf_info_a = srsran_rf_get_info(&rf_a);
@@ -524,13 +535,6 @@ bool LTESniffer_Core::run(){
           }
           break;
       }
-      // if (start_recording){
-      //   size_t nof_samples = SRSRAN_SF_LEN_PRB(cell.nof_prb);
-      //   cf_t *temp_ptr[2];
-      //   temp_ptr[0] = cur_worker->getBuffers_a()[0];
-      //   temp_ptr[1] = cur_worker->getBuffers_b()[0];
-      //   srsran_filesink_write_multi(&file_sink, reinterpret_cast<void**> (temp_ptr) ,nof_samples, 2);
-      // }
 
       /*increase system frame number*/
       if (sf_idx == 9) {
@@ -623,29 +627,34 @@ bool LTESniffer_Core::run(){
       break;
     }
   }
-
   phy->joinPending();
+
+  uhd_stop = true;
+  /*Waking up any waiting thread (a or b)*/
+  if (a_triggered == false){
+    std::unique_lock<std::mutex> lock_a(mtx_a);
+    a_triggered = true;
+  }
+  if (b_triggered == false){
+    std::unique_lock<std::mutex> lock_b(mtx_b);
+    b_triggered = true;
+  }
+  cv.notify_all();
 
   std::cout << "Destroyed Phy" << std::endl;
   if (args.input_file_name == ""){
-    srsran_rf_close(&rf_a);
+    // srsran_rf_close(&rf_a);
+    // srsran_rf_close(&rf_b);
     //srsran_ue_dl_free(falcon_ue_dl.q);
     srsran_ue_sync_free(&ue_sync_a);
     srsran_ue_mib_free(&ue_mib);
   }
-  uhd_stop = true;
-  //common->getRNTIManager().printActiveSet();
+  // uhd_stream_thread.~UhdStreamThread();
+
   cout << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
-  //phy->getCommon().getRNTIManager().printActiveSet();
-  //rnti_manager_print_active_set(falcon_ue_dl.rnti_manager);
   phy->getCommon().printStats();
   cout << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
   
-  /* Print statistic of 256tracking*/
-  // if (mcs_tracking_mode){ mcs_tracking.print_database_ul(); }
-
-  /* Print statistic of harq retransmission*/
-  //if (harq_mode){ harq.printHARQDatabase(); }
   return EXIT_SUCCESS;
 }
 
@@ -768,45 +777,57 @@ int srsran_rf_recv_multi_usrp_wrapper( void* rf_a,
   double rev_frac_secs_b  = uhd_stream_thread.get_time_frac_secs_b();
   int time_sec_a          = extractTimeSecond(rev_secs_a);
   int time_sec_b          = extractTimeSecond(rev_secs_b);
+
+  // if (nof_sf%200 == 0){
+  //   std::cout << "Nof_samples: " << nsamples << " -- Time a = " << rev_secs_a << " | " << rev_frac_secs_a << " -- ";
+  //   std::cout << "Time b = " << rev_secs_b << " | " << rev_frac_secs_b << std::endl;
+  // }
+
+  nof_sf++;
+
   /*If time stamp from usrp a == usrp b in second resolution, but different in fraction of second */
-  if (time_sec_a == time_sec_b){
+  if ((time_sec_a == time_sec_b) && !uhd_stop ){ //&& (nof_sf > 2000)
     /*calculate the time difference*/
     double diff_time = abs(rev_frac_secs_a - rev_frac_secs_b);
     /*if the time difference higher than 1 micro second*/
-    if ((diff_time > 0.000001)){
+    if ((diff_time > 0.000001) && (diff_time < 0.001)){
       /*Convert time difference to number of samples*/
       int nof_offset_sample = diff_time * nsamples * 1000;
-      /*if the number of samples higher than max buffer*/
-      nof_offset_sample = (nof_offset_sample > LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE)? LTESNIFFER_DUMMY_BUFFER_NOF_SAMPLE:nof_offset_sample;
+      /*if the number of samples higher than 1 subframe samples*/
+      nof_offset_sample = (nof_offset_sample > nsamples)? nsamples:nof_offset_sample;
       /*prepare dummy buffer to adjust samples*/
       void* dummy_ptr[SRSRAN_MAX_PORTS];
       for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
         dummy_ptr[i] = uhd_dummy_buffer[i];
       }
       if (rev_frac_secs_a > rev_frac_secs_b){ //if usrp a is faster than usrp b
-        std::cout << "[USRP] Re-align samples from USRP B, " << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
+        std::cout << "[USRP] Re-align samples from USRP B" << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
         srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, dummy_ptr, nof_offset_sample, true, NULL, NULL);
       }else{ // usrp b is faster than usrp a
-        std::cout << "[USRP] Re-align samples from USRP A, " << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
+        std::cout << "[USRP] Re-align samples from USRP A" << " -- time_a = " << rev_frac_secs_a << " -- time_b= " << rev_frac_secs_b << " -- diff = " << diff_time << " -- nof_sample = " << nof_offset_sample << std::endl;
         srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, dummy_ptr, nof_offset_sample, true, NULL, NULL);
       }
     }
-  //if timestamp are different in many seconds, then adjust until they are equal in second
-  }else if ((time_sec_a != time_sec_b) && align_usrp){ 
-    int diff_time_sec = abs(time_sec_a - time_sec_b);
-    void* dummy_ptr[SRSRAN_MAX_PORTS];
-    for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
-      dummy_ptr[i] = uhd_dummy_buffer[i];
-    }
-    std::cout << "[USRP] Re-align samples in second = " << diff_time_sec << std::endl;
-    for (int dm_loop = 0; dm_loop < diff_time_sec*1000; dm_loop++){
-      if (time_sec_a > time_sec_b){ //adjust usrp b
-        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, dummy_ptr, nsamples, true, NULL, NULL);
-      }else{
-        srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, dummy_ptr, nsamples, true, NULL, NULL);
+    else if (diff_time >= 0.001 && align_usrp){
+      int nof_loop = std::round(diff_time*1000);
+      void* dummy_ptr[SRSRAN_MAX_PORTS];
+      for (int i = 0; i < SRSRAN_MAX_PORTS; i++) {
+        dummy_ptr[i] = uhd_dummy_buffer[i];
       }
+      std::string usrp_name = (rev_frac_secs_a > rev_frac_secs_b)? "B":"A";
+      std::cout << "[USRP] Re-align USRP " << usrp_name <<" in multiple subframes (frac_second) = " << diff_time << " -- nof_loop = " << nof_loop << std::endl;
+      for (int dm_loop = 0; dm_loop < nof_loop; dm_loop++){
+        if ((rev_frac_secs_a > rev_frac_secs_b) && !uhd_stop){ //adjust usrp b
+          srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, dummy_ptr, nsamples, true, NULL, NULL);
+        }else if ((rev_frac_secs_a < rev_frac_secs_b) && !uhd_stop){
+          srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, dummy_ptr, nsamples, true, NULL, NULL);
+        }
+      }
+      align_usrp = false;
     }
-    align_usrp = false;
+  //if timestamp are different in many seconds, then adjust until they are equal in second
+  }else if ((time_sec_a != time_sec_b) && align_usrp){
+    //not implemented yet
   }
 
   return SRSRAN_SUCCESS;
@@ -823,6 +844,8 @@ UhdStreamThread::UhdStreamThread(){
           std::cerr << "Failed to set thread priority." << std::endl;
       }      
       this->get_data_stream_a();
+      std::cout << "Thread a finished" << std::endl;
+      return SRSRAN_SUCCESS;
     });
   future_b = std::async(std::launch::async, [this](){
       int th_ret;
@@ -834,11 +857,15 @@ UhdStreamThread::UhdStreamThread(){
           std::cerr << "Failed to set thread priority." << std::endl;
       }      
       this->get_data_stream_b();
+      std::cout << "Thread b finished" << std::endl;
+      return SRSRAN_SUCCESS;
     });
 }
 
 UhdStreamThread::~UhdStreamThread(){
-
+  uhd_stop = true;
+  // future_a.wait();
+  // future_b.wait();
 }
 
 void UhdStreamThread::run(){
@@ -866,15 +893,18 @@ int UhdStreamThread::get_data_stream_a(){
     std::unique_lock<std::mutex> lock_a(mtx_a);
     cv.wait(lock_a, [] { return a_triggered; });
     a_triggered = false;
-    // std::cout << "nof_sample_a = " << nof_sample_a << std::endl;
-    srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, ptr_a, nof_sample_a, true, &secs_a, &frac_secs_a);
-    
+    {
+      srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_a, ptr_a, nof_sample_a, true, &secs_a, &frac_secs_a);
+    }
     {
       a_finished = true;
       a_fn_cv.notify_one();
     }
     lock_a.unlock();
   }
+  //if uhd_stop == true
+  srsran_rf_close((srsran_rf_t*)rf_a);
+  
   return SRSRAN_SUCCESS;
 }
 
@@ -883,14 +913,18 @@ int UhdStreamThread::get_data_stream_b(){
     std::unique_lock<std::mutex> lock_b(mtx_b);
     cv.wait(lock_b, [] { return b_triggered; });
     b_triggered = false;
-    // std::cout << "nof_sample_b = " << nof_sample_b << std::endl;
-    srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, ptr_b, nof_sample_b, true, &secs_b, &frac_secs_b);
+    {
+      srsran_rf_recv_with_time_multi((srsran_rf_t*)rf_b, ptr_b, nof_sample_b, true, &secs_b, &frac_secs_b);
+    }
     
     {
       b_finished = true;
       b_fn_cv.notify_one();
     }
   }
+  //if uhd_stop == true
+  srsran_rf_close((srsran_rf_t*)rf_b);
+  
   return SRSRAN_SUCCESS;
 }
 

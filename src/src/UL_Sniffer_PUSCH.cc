@@ -388,7 +388,11 @@ void print_ul_grant_dci_0(srsran_pusch_grant_t &ul_grant, uint16_t tti, uint16_t
 
 void PUSCH_Decoder::decode()
 {
-    enb_ul.in_buffer = original_buffer[0]; // 0 for downlink, 1 for uplink, now 0 because there are 2 separate buffers
+    if (decoder_a){
+        enb_ul.in_buffer = original_buffer[0]; // 0 for downlink, 1 for uplink, now 0 because there are 2 separate buffers
+    }else if (decoder_b){
+        enb_ul.in_buffer = original_buffer[1]; // 0 for downlink, 1 for uplink, now 0 because there are 2 separate buffers
+    }
     srsran_enb_ul_fft(&enb_ul);            // run FFT to uplink samples
     sf_power->computePower(enb_ul.sf_symbols);
 
@@ -714,6 +718,7 @@ void PUSCH_Decoder::work_prach()
 
 void PUSCH_Decoder::print_debug(DCI_UL &decoding_mem, std::string offset_name, std::string modulation_mode, float signal_pw, double noise, double falcon_sgl_pwr)
 {
+    std::cout << "[" << debug_str << "]";
     std::cout << std::left << std::setw(12) << offset_name << " SF: ";
     std::cout << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
     std::cout << " -- RNTI: ";

@@ -77,7 +77,9 @@ private:
   bool                  has_pusch_config = false;
   ULSchedule            *ulsche;
   srsran_enb_ul_t       enb_ul = {};
+  srsran_enb_ul_t       enb_ul_b = {};
   PUSCH_Decoder         *puschdecoder;
+  PUSCH_Decoder         *puschdecoder_b;
   srsran_ul_sf_cfg_t    ul_sf;
   srsran_ul_cfg_t       ul_cfg = {};
   UL_HARQ               *ul_harq;

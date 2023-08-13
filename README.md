@@ -10,7 +10,7 @@ a passive sniffer that can capture privacy-related packets on the air. However, 
 
 Please refer to our [paper][paper] for more details.
 
-## Guideline for setting up multiple USRP B210s for uplink sniffing mode
+## Guideline for setting up multiple USRP B-Series (B200/B210) for uplink sniffing mode
 ### Hardware Requirement
 Using multiple USRPs for uplink sniffing mode requires a higher computation cost than using a single USRP X310. This is because LTESniffer needs to process multiple data streams from multiple USRPs. Therefore, it is recommended to use a powerful CPU to execute LTESniffer when using multiple USRPs.
 
@@ -19,7 +19,7 @@ Using multiple USRPs for uplink sniffing mode requires a higher computation cost
 - At least 16Gb RAM
 - 256 Gb SSD storage
 ### SDR
-Currently, LTESniffer only supports 2 USRP B210 (B200 is on testing and will be updated soon). The USRP B210 **MUST** be equipped with GPSDO, because LTESniffer requires highly precise synchronization between 2 B210, which can be achieved by using GPSDO. Other SDRs have not been tested. Note that it is nearly impossible to operate LTESniffer in uplink sniffing mode without GPSDO.
+Currently, LTESniffer only supports 2 USRP B-series (B200/B210). Both USRP B2xx(s) **MUST** be equipped with GPSDO because LTESniffer utilizes the timestamp from GPSDO to adjust uplink/downlink RF samples and achieve precise synchronization between uplink-downlink channels. Other SDRs have not been tested. Note that it is nearly impossible to operate LTESniffer in uplink sniffing mode without GPSDO.
 
 ### Installation
 The Dependencies and initial setup are similar to when using a single USRP device, please refer to [main branch README][main-readme].
@@ -35,35 +35,63 @@ make -j4 (use 4 threads)
 ```
 
 ### Make your SDR ready
-After building the project the first time, please find out the serial number of your USRP B210s and modify that information in the source file `src/src/LTESniffer_Core.cc`.
+After building the project the first time, please find out the serial numbers of your USRP B200/B210(s) and modify that information in the source file `src/src/LTESniffer_Core.cc`.
 
 **Find out the serial number of USRP**
 ```bash
 uhd_find_devices
+--------------------------------------------------
+-- UHD Device 0
+--------------------------------------------------
+Device Address:
+  ->serial: 3125XXX
+    name: MyB210
+    product: B210
+    type: b200
+
+
+--------------------------------------------------
+-- UHD Device 1
+--------------------------------------------------
+Device Address:
+  ->serial: 31AEXXX
+    name: MyB210
+    product: B210
+    type: b200
+
 ```
 **Modify source file `LTESniffer_Core.cc`**
 
-In the source file `LTESniffer_Core.cc`, please look at line `178` and `179`:
+In the source file `LTESniffer_Core.cc`, please look at line `179` and `180`:
 ```
-std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,serial=XXXXXXX";
-std::string rf_b_string = "clock=gpsdo,num_recv_frames=512,serial=XXXXXXX";
+  std::string rf_a_string = "clock=gpsdo,num_recv_frames=512,recv_frame_size=8000,serial=3113D1B"; 
+  std::string rf_b_string = "clock=gpsdo,num_recv_frames=512,recv_frame_size=8000,serial=3125CB5";
 ```
-After that, replace the original serials with 2 serials of your B210 and build the project again
+After that, replace the original serials with 2 serials of your B210/B200(s) and build the project again
 ```bash
 cd ~/LTESniffer/build/
 make -j4
 ```
-**Make sure that GPSDOs in both USRP B210 are locked**
+**Make sure that GPSDOs in both USRP B210/B200(s) are locked**
 
 LTESniffer requires GPSDO in both B210 to be locked before it can decode uplink signal correctly.
-To obtain that, please run LTESniffer the first time, wait until it does the cell search, stop it in the middle, and wait until the GPSDOs are locked. There is a led next to the GPSDO port of B210 which indicates GPSDO is locked when it is lighted up.
+To achieve that, please run LTESniffer the first time, stop it (Ctrl + C) once it finishes the cell search procedure, and wait until both GPSDOs on 2 USRPs are locked. There is a led light next to the GPSDO port of USRP B210/B200 which indicates GPSDO is locked when it is lighted up (Refer to 3 steps below).
+
+**Step 1:** Run LTESniffer first time.
 ```bash
 sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <UL Freq> -C -m 1
 ```
-Once GPSDOs are locked, you can run LTESniffer to decode uplink packets.
-(note that the purpose of the first run is to make GPSDO locked, LTESniffer might not be able to decode packets correctly at that time.)
+After running LTESniffer the first time, because GPSDO has not been locked yet, there will be a warning notification:
+```
+/home/pc/LTESniffer-test/LTESniffer/build/srsRAN-src/lib/src/phy/rf/rf_uhd_imp.cc:831: Could not lock reference clock source. Sensor: gps_locked=false
+```
+**Step 2:** Wait until GPSDOs are locked on both USRPs (It might take 10 mins depended on GPS signal quality).
+
+**Step3:** Once GPSDOs are locked, you can run LTESniffer to decode uplink traffic.
+
 ```bash
 sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <UL Freq> -C -m 1
+example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 1
 ```
 
 **Using Octoclock**
@@ -72,7 +100,7 @@ Using Octoclock with multiple USRPs seems to have a worse synchronization than u
 
 **Limitation**
 
-When employing multiple USRP B-series units for uplink sniffing mode, the success rate and DCI detection tend to be lower, reaching around 80%, in comparison to using a single USRP X310. This discrepancy can be attributed to several reasons. Firstly, despite LTESniffer utilizing GPSDO, the synchronization between uplink and downlink channels is not as efficient as when utilizing a single USRP X310. Secondly, the USRP X310 outperforms the USRP B210 in terms of RF front-end capabilities. Therefore, for the best performance, we strongly recommend using USRP X310 for uplink sniffing mode. 
+When employing multiple USRP B-series for uplink sniffing mode, the success rate and DCI detection tend to be lower, reaching around 80%, in comparison to using a single USRP X310. This discrepancy can be attributed to several reasons. Firstly, despite the use of GPSDO, the synchronization between uplink and downlink channels is not as efficient as when utilizing a single USRP X310. Secondly, the USRP X310 outperforms the USRP B210/B200 in terms of RF front-end capabilities. Therefore, for the best performance, we strongly recommend using USRP X310 for uplink sniffing mode. 
 
 ### Output of LTESniffer
 LTESniffer provides pcap files in the output. The pcap file can be opened by WireShark for further analysis and packet trace.

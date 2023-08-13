@@ -96,7 +96,19 @@ public:
     void set_target_rnti(uint16_t rnti)  { target_rnti = rnti;  }
     void set_debug_mode(bool en_debug_)  { en_debug = en_debug_;}
     void set_api_mode(int api_mode_)     { api_mode = api_mode_;}
+    void set_decoder(std::string a_b){
+        if (a_b == "a"){
+            decoder_a = true;
+            debug_str = "A";
+        }else if (a_b == "b"){
+            decoder_b = true;
+            debug_str = "B";
+        }
+    }
 private:
+    bool        decoder_a = false;
+    bool        decoder_b = false;
+    std::string debug_str = "";
     uint16_t target_rnti    = 0;
     bool en_debug           = false;
     int api_mode            = -1;

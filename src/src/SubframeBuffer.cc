@@ -21,10 +21,10 @@
 #include "include/SubframeBuffer.h"
 
 SubframeBuffer::SubframeBuffer(uint32_t rf_nof_rx_ant) : rf_nof_rx_ant(rf_nof_rx_ant) {
-  for (uint32_t i = 0; i < rf_nof_rx_ant; i++) {
+  for (uint32_t i = 0; i < 4; i++) {
     sf_buffer_a[i] = static_cast<cf_t*>(srsran_vec_malloc(3*static_cast<uint32_t>(sizeof(cf_t))*static_cast<uint32_t>(SRSRAN_SF_LEN_PRB(100))));
   }
-  for (uint32_t i = 0; i < rf_nof_rx_ant; i++) {
+  for (uint32_t i = 0; i < 4; i++) {
     sf_buffer_b[i] = static_cast<cf_t*>(srsran_vec_malloc(3*static_cast<uint32_t>(sizeof(cf_t))*static_cast<uint32_t>(SRSRAN_SF_LEN_PRB(100))));
   }
   for (uint32_t i = 0; i < UL_SNIFFER_MAX_NOF_OFFSET; i++) {

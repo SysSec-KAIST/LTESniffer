@@ -75,8 +75,25 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                      pcapwriter,
                                      mcs_tracking,
                                      mcs_tracking->get_debug_mode());
+    puschdecoder->set_decoder("a"); // a means decoder a
     /*Uplink enb init*/
     if (srsran_enb_ul_init(&enb_ul, sfb.sf_buffer_b[0], 110))
+    { // 110 = max PRB
+      ERROR("Error initiating ENB UL");
+      return;
+    }
+    puschdecoder_b = new PUSCH_Decoder(enb_ul_b,
+                                     ul_sf,
+                                     ulsche,
+                                     sfb.sf_buffer_b,
+                                     sfb.sf_buffer_offset,
+                                     ul_cfg,
+                                     pcapwriter,
+                                     mcs_tracking,
+                                     mcs_tracking->get_debug_mode());
+    puschdecoder_b->set_decoder("b"); // b means decoder b
+    /*Uplink enb init*/
+    if (srsran_enb_ul_init(&enb_ul_b, sfb.sf_buffer_b[1], 110))
     { // 110 = max PRB
       ERROR("Error initiating ENB UL");
       return;
@@ -263,6 +280,11 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
         ERROR("Error set cell ENB UL");
         return;
       }
+      if (srsran_enb_ul_set_cell(&enb_ul_b, falcon_ue_dl.q->cell, &ul_cfg.dmrs, nullptr))
+      {
+        ERROR("Error set cell ENB UL");
+        return;
+      }
       set_config();
 
       // init PUSCH decoder
@@ -278,8 +300,10 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
       /*RACH detector config*/
       puschdecoder->set_rach_config(ulsche->get_prach_config());
       puschdecoder->set_configed();
+      puschdecoder_b->set_rach_config(ulsche->get_prach_config());
+      puschdecoder_b->set_configed();
     }
-    if (puschdecoder->get_configed())
+    if (puschdecoder->get_configed()&&puschdecoder_b->get_configed())
     {
       /*Decode DL messages but only TM1 as only having 1 antenna for DL*/
       pdschdecoder->init_pdsch_decoder(&falcon_ue_dl,
@@ -337,20 +361,20 @@ void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
 
       /*Push current UL DCI0 to database to decode 4ms later*/
       ulsche->pushULSche(tti, dci_ul);
-      // ulsche->pushULSche(tti + 1, dci_ul);
-      // ulsche->pushULSche(tti - 1, dci_ul);
-      // ulsche->pushULSche(tti + 2, dci_ul);
-      // ulsche->pushULSche(tti - 2, dci_ul);
       /*Push current RAR grant to database to decode 4ms later*/
       ulsche->push_rar_ULSche(tti, rar_dci_ul_vector);
-      // ulsche->push_rar_ULSche(tti + 1, rar_dci_ul_vector);
-      // ulsche->push_rar_ULSche(tti - 1, rar_dci_ul_vector);
       puschdecoder->init_pusch_decoder(ulsche->getULSche(tti),
                                        ulsche->get_rar_ULSche(tti),
                                        ul_sf,
                                        &subframeInfo.getSubframePower());
+      // puschdecoder_b->init_pusch_decoder(ulsche->getULSche(tti),
+      //                                  ulsche->get_rar_ULSche(tti),
+      //                                  ul_sf,
+      //                                  &subframeInfo.getSubframePower());
       puschdecoder->decode();         // decode PUSCH
       puschdecoder->work_prach();     // decode PRACH
+      // puschdecoder_b->decode();         // decode PUSCH
+      // puschdecoder_b->work_prach();     // decode PRACH
       ulsche->deleteULSche(tti);      // delete current DCI0 list and uplink grant in the database after decoding
       ulsche->delete_rar_ULSche(tti); // also for RAR grant
     }
