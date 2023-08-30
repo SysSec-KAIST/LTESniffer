@@ -98,7 +98,7 @@ message("CMNALIB_LIBRARIES: " ${CMNALIB_LIBRARIES})
 # cmnalib also needs glib:
 
 INCLUDE(FindPkgConfig)
-pkg_check_modules(GLIB2		REQUIRED	glib-2.0)
+pkg_check_modules(GLIB2   REQUIRED  glib-2.0)
 
 include_directories(${GLIB2_INCLUDE_DIRS})
 #link_directories(${GLIB2_LIBRARY_DIRS})
@@ -176,6 +176,9 @@ else(SRSRAN_FOUND AND NOT FORCE_SUBPROJECT_SRSRAN)
   message("Download SRSRAN as a subproject and build it.")
 
   # Download and unpack srsRAN at configure time
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-src")
+  file(COPY "${CMAKE_SOURCE_DIR}/srsRAN_4G_mirror/" DESTINATION "${CMAKE_BINARY_DIR}/srsRAN-src")
+
   configure_file(external/cmake/srsRAN.CMakeLists.txt.in srsRAN-download/CMakeLists.txt)
   execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-download" )
@@ -272,7 +275,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
   message("MARCH - FLAGS: ${GCC_ARCH}")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=${GCC_ARCH} -Wall -Wno-comment -Wno-write-strings -Winline -Wno-unused-result -Wformat -Wmissing-field-initializers -Wtype-limits -std=c99 -D_GNU_SOURCE")
 
-  find_package(SSE)	# evaluation comes later
+  find_package(SSE) # evaluation comes later
 
   if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -O0 -DDEBUG_MODE -DBUILD_TYPE_DEBUG")
@@ -292,7 +295,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFORCE_STANDARD_RATE")
   endif (USE_LTE_RATES)
 
-  #find_package(SSE)	# moved upwards before BUILD_TYPE-specific flags. -> AVX512 detection/test code gets subject of O3 optimization -> reports availability even if not present
+  #find_package(SSE)  # moved upwards before BUILD_TYPE-specific flags. -> AVX512 detection/test code gets subject of O3 optimization -> reports availability even if not present
   if (HAVE_AVX2)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpmath=sse -mavx2 -DLV_HAVE_AVX2 -DLV_HAVE_AVX -DLV_HAVE_SSE")
   else (HAVE_AVX2)
@@ -380,7 +383,7 @@ set(INCLUDE_DIR include)    # PATH to usr/local/include for install
 ########################################################################
 include_directories(${PROJECT_BINARY_DIR}/lib/include)
 include_directories(${PROJECT_SOURCE_DIR}/lib/include)
-include_directories(${PROJECT_SOURCE_DIR}/src)	# for cross includes of top-level applications
+include_directories(${PROJECT_SOURCE_DIR}/src)  # for cross includes of top-level applications
 include_directories(${PROJECT_SOURCE_DIR}/lib)
 ########################################################################
 # Add the subdirectories
