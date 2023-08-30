@@ -416,13 +416,13 @@ void PUSCH_Decoder::decode()
             /*Investigate current decoding member to know it has a valid UL grant or not*/
             valid_ul_grant = investigate_valid_ul_grant(decoding_mem);
             /*Only decode member with valid UL grant*/
-            if ((decoding_mem.rnti == target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS))
+            if (((decoding_mem.rnti == target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS)) && decoding_mem.rnti != 0)
             {
                 /*Setup uplink config for decoding*/
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                 ul_cfg.pusch.enable_64qam = false; // check here for 64/16QAM
                 ul_cfg.pusch.meas_ta_en = true;    // enable ta measurement
-                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant.get();
+                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant; //bws
                 int mcs_idx = ul_cfg.pusch.grant.tb.mcs_idx;
                 pusch_res.crc = false;
                 /*Get Number of ack which was calculated in Subframe worker last 4 ms*/
@@ -473,7 +473,7 @@ void PUSCH_Decoder::decode()
                         decoding_mem.mcs_mod = UL_SNIFFER_256QAM_MAX;
                         ul_cfg.pusch.enable_64qam = true;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
-                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256.get();
+                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                         {
                             decode_run("[PUSCH-256]", decoding_mem, modulation_mode, 0);
@@ -503,7 +503,7 @@ void PUSCH_Decoder::decode()
                                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                                 ul_cfg.pusch.enable_64qam = true; // 64QAM
                                 ul_cfg.pusch.meas_ta_en = true;   // enable ta measurement
-                                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant.get();
+                                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
 
                                 decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
 
@@ -512,7 +512,7 @@ void PUSCH_Decoder::decode()
                                     ul_cfg.pusch.rnti = decoding_mem.rnti;
                                     ul_cfg.pusch.enable_64qam = true;
                                     ul_cfg.pusch.meas_ta_en = true; // enable ta measurement
-                                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256.get();
+                                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                                     modulation_mode = modulation_mode_string_256(mcs_idx);
                                     if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                                     {
@@ -542,7 +542,7 @@ void PUSCH_Decoder::decode()
                         break;
                     case UL_SNIFFER_256QAM_MAX:
                         ul_cfg.pusch.enable_64qam = true;
-                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256.get();
+                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                         {
@@ -555,7 +555,7 @@ void PUSCH_Decoder::decode()
                         decode_run("[PUSCH-16 ]", decoding_mem, modulation_mode, 0);
                         if (pusch_res.crc == false)
                         { // try 256QAM table if case above failed
-                            ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256.get();
+                            ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                             modulation_mode = modulation_mode_string_256(mcs_idx);
                             if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                             {
@@ -894,6 +894,10 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
+    if(decoding_mem.ran_ul_grant==nullptr) //bws
+    {
+        return SRSRAN_ERROR;
+    }
     if (decoding_mem.is_rar_gant)
     {
         return SRSRAN_SUCCESS;
