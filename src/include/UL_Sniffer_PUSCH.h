@@ -109,7 +109,7 @@ private:
     bool        decoder_a = false;
     bool        decoder_b = false;
     std::string debug_str = "";
-    uint16_t target_rnti    = 0;
+    uint16_t target_rnti    = -1;
     bool en_debug           = false;
     int api_mode            = -1;
     bool configed           = false;
