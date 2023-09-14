@@ -97,7 +97,7 @@ public:
     void set_debug_mode(bool en_debug_)  { en_debug = en_debug_;}
     void set_api_mode(int api_mode_)     { api_mode = api_mode_;}
 private:
-    uint16_t target_rnti    = 0;
+    uint16_t target_rnti    = -1;
     bool en_debug           = false;
     int api_mode            = -1;
     bool configed           = false;
