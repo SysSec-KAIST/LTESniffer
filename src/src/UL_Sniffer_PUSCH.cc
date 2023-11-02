@@ -263,8 +263,8 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
     }
 
     /*Only print debug when SNR of RNTI >= 1 */
-    if ((en_debug) && (enb_ul.chest_res.snr_db >= 1))
-    { //|| target_rnti !=0
+    if ((en_debug) && ((enb_ul.chest_res.snr_db >= 1 && !has_target_rnti) || (decoding_mem.rnti == target_rnti && has_target_rnti))&& decoding_mem.rnti != 0)
+    {
         float signal_power = enb_ul.chest_res.snr_db;
         float falcon_signal_power = 0.0f;
         float tmp_sum = 0.0f;
@@ -416,7 +416,7 @@ void PUSCH_Decoder::decode()
             /*Investigate current decoding member to know it has a valid UL grant or not*/
             valid_ul_grant = investigate_valid_ul_grant(decoding_mem);
             /*Only decode member with valid UL grant*/
-            if (((decoding_mem.rnti == target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS))&& decoding_mem.rnti != 0)
+            if (((decoding_mem.rnti == target_rnti && has_target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS))&& decoding_mem.rnti != 0)
             {
                 /*Setup uplink config for decoding*/
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
