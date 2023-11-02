@@ -146,7 +146,12 @@ public:
                         int length,
                         bool result,
                         srsran_chest_dl_res_t* ce_res);
-    void set_target_rnti(uint16_t rnti) {target_rnti = rnti;}
+    void set_target_rnti(uint16_t rnti) {
+        if (rnti != 0){
+            has_target_rnti = true;
+            target_rnti = rnti;
+        }
+    }
     void set_debug_mode(bool debug) { en_debug = debug;}
     void set_api_mode(int api_mode_) { api_mode = api_mode_;}
     void print_api_dl(uint32_t tti, uint16_t rnti, int ident, std::string value, int msg);
@@ -155,6 +160,7 @@ private:
     int         api_mode            = -1; 
     bool        en_debug            = false;
     uint16_t    target_rnti         = 0;
+    bool        has_target_rnti     = false;
     int         nof_antenna         = 2;
     /*RRC Con Set*/
     bool                               found_con_ret = false;

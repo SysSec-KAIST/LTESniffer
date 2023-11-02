@@ -25,6 +25,9 @@
 #include <string.h>
 #include <strings.h>
 #include <string>
+#include <memory>
+#include "mutex"
+#include "memory"
 
 #include "falcon/common/Settings.h"
 #include "rnti_manager_c.h"
@@ -81,8 +84,8 @@ public:
   virtual bool validate(uint16_t rnti, uint32_t formatIdx);
   virtual bool validateAndRefresh(uint16_t rnti, uint32_t formatIdx);
   virtual void activateAndRefresh(uint16_t rnti, uint32_t formatIdx, ActivationReason reason);
-  virtual bool isEvergreen(uint16_t rnti, uint32_t formatIdx) const;
-  virtual bool isForbidden(uint16_t rnti, uint32_t formatIdx) const;
+  virtual bool isEvergreen(uint16_t rnti, uint32_t formatIdx) ;
+  virtual bool isForbidden(uint16_t rnti, uint32_t formatIdx) ;
   virtual void stepTime();
   virtual void stepTime(uint32_t nSteps);
   virtual void setHistogramThreshold(uint32_t threshold);
@@ -101,7 +104,7 @@ private:
   virtual uint32_t getLikelyDlFormatIdx(uint16_t rnti);
   void activateRNTI(uint16_t rnti, ActivationReason reason);
   void deactivateRNTI(uint16_t rnti);
-  bool isExpired(uint16_t rnti) const;
+  bool isExpired(uint16_t rnti) ;
   void cleanExpired();
   uint32_t nformats;
   std::vector<Histogram> histograms;
@@ -116,4 +119,5 @@ private:
   uint32_t threshold;
   uint32_t maxCandidatesPerStepPerFormat;
   std::vector<int32_t> remainingCandidates;
+  std::mutex rntiManagerMutex;
 };

@@ -159,12 +159,12 @@ void RNTIManager::addForbidden(uint16_t rntiStart, uint16_t rntiEnd, uint32_t fo
 }
 
 void RNTIManager::addCandidate(uint16_t rnti, uint32_t formatIdx) {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   histograms[formatIdx].add(rnti);
   remainingCandidates[formatIdx]--;
 }
 
 bool RNTIManager::validate(uint16_t rnti, uint32_t formatIdx) {
-
   // evergreen consultation
   if(isEvergreen(rnti, formatIdx)) {
     return true;
@@ -195,15 +195,19 @@ bool RNTIManager::validate(uint16_t rnti, uint32_t formatIdx) {
 bool RNTIManager::validateAndRefresh(uint16_t rnti, uint32_t formatIdx) {
   bool result = validate(rnti, formatIdx);
   if(result) {
+    std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
     lastSeen[rnti] = timestamp;
+    rntiManagerLock.unlock();
   }
   return result;
 }
 
 void RNTIManager::activateAndRefresh(uint16_t rnti, uint32_t formatIdx, ActivationReason reason) {
   activateRNTI(rnti, reason);
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   lastSeen[rnti] = timestamp;
   assocFormatIdx[rnti] = formatIdx;
+  rntiManagerLock.unlock();
 }
 
 uint32_t RNTIManager::getFrequency(uint16_t rnti, uint32_t formatIdx) {
@@ -215,6 +219,7 @@ uint32_t RNTIManager::getAssociatedFormatIdx(uint16_t rnti) {
 }
 
 ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
     if(it->rnti == rnti) return it->reason;
   }
@@ -222,6 +227,7 @@ ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
 }
 
 vector<rnti_manager_active_set_t> RNTIManager::getActiveSet() {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   cleanExpired();
   vector<rnti_manager_active_set_t> result(activeSet.size());
   uint32_t index = 0;
@@ -288,7 +294,8 @@ void RNTIManager::getHistogramSummary(uint32_t *buf)
   }
 }
 
-bool RNTIManager::isEvergreen(uint16_t rnti, uint32_t formatIdx) const {
+bool RNTIManager::isEvergreen(uint16_t rnti, uint32_t formatIdx) {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   const vector<Interval>& intervals = evergreen[formatIdx];
   for(vector<Interval>::const_iterator inter = intervals.begin(); inter != intervals.end(); inter++) {
     if(inter->matches(rnti)) return true;
@@ -296,7 +303,8 @@ bool RNTIManager::isEvergreen(uint16_t rnti, uint32_t formatIdx) const {
   return false;
 }
 
-bool RNTIManager::isForbidden(uint16_t rnti, uint32_t formatIdx) const {
+bool RNTIManager::isForbidden(uint16_t rnti, uint32_t formatIdx)  {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   const vector<Interval>& intervals = forbidden[formatIdx];
   for(vector<Interval>::const_iterator inter = intervals.begin(); inter != intervals.end(); inter++) {
     if(inter->matches(rnti)) return true;
@@ -305,6 +313,7 @@ bool RNTIManager::isForbidden(uint16_t rnti, uint32_t formatIdx) const {
 }
 
 RMValidationResult_t RNTIManager::validateByActiveList(uint16_t rnti, uint32_t formatIdx) {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   if(active[rnti]) {  // active RNTI
     if(!isExpired(rnti)) {   // lifetime check
       return RMV_TRUE;
@@ -375,6 +384,7 @@ uint32_t RNTIManager::getLikelyDlFormatIdx(uint16_t rnti) {
 }
 
 void RNTIManager::activateRNTI(uint16_t rnti, ActivationReason reason) {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   if(!active[rnti]) {
     active[rnti] = true;
     activeSet.push_back(RNTIActiveSetItem(rnti, reason));
@@ -389,7 +399,7 @@ void RNTIManager::deactivateRNTI(uint16_t rnti) {
   }
 }
 
-bool RNTIManager::isExpired(uint16_t rnti) const {
+bool RNTIManager::isExpired(uint16_t rnti) {
   bool result = true;
   if(active[rnti]) {
     if(timestamp - lastSeen[rnti] < lifetime) {
@@ -400,6 +410,7 @@ bool RNTIManager::isExpired(uint16_t rnti) const {
 }
 
 void RNTIManager::cleanExpired() {
+  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
   list<RNTIActiveSetItem>::iterator it = activeSet.begin();
   while(it != activeSet.end()) {
     if(isExpired(it->rnti)) {
