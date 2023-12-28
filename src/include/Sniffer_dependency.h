@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+#include "include/Sniffer_file_defs.h" // BWS
+
 // include C-only headers
 #ifdef __cplusplus
     extern "C" {
@@ -36,9 +38,15 @@
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 
+// BWS
 #define DL_MODE     0
 #define UL_MODE     1
 #define DL_UL_MODE  2
+// BWS
+#define DEBUG_DCI_PRINT 1
+#define DEBUG_TABLE_PRINT 1
+#define DEBUG_SEC_PRINT 1
+#define FILE_PRINT 1
 
 #define ID_RAN_VAL  0
 #define ID_TMSI     1

@@ -1,4 +1,5 @@
 #include "include/DL_Sniffer_PDSCH.h"
+#include "include/Sniffer_dependency.h"
 
 float p_a_array[8]{-6, -4.77, -3, -1.77, 0, 1, 2, 3};
 
@@ -1146,6 +1147,7 @@ int PDSCH_Decoder::decode_dl_mode()
 
 	return SRSRAN_SUCCESS;
 }
+// BWS FIO FILE_IDX_DL_DCI
 void PDSCH_Decoder::print_debug_dl(std::string name,
 								   int tti,
 								   uint16_t rnti,
@@ -1158,32 +1160,36 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 								   bool result,
 								   srsran_chest_dl_res_t *ce_res)
 {
-	std::cout << std::left << std::setw(9) << name;
-	std::cout << "SF:" << std::left << std::setw(4) << tti / 10 << "-" << tti % 10;
-	// std::cout << "[" << std::left << std::setw(2) << idx  << "]";
-	std::cout << GREEN << " -- RNTI: " << std::left << std::setw(5) << rnti << RESET;
-	std::cout << WHITE << " -- DCI: " << std::left << std::setw(4) << format << RESET;
-	std::cout << YELLOW << " -- Mod: " << std::left << std::setw(6) << mod << RESET;
-	std::cout << " -- MCS: " << std::left << std::setw(3) << mcs_idx;
+	std::stringstream msg;
+	msg << std::left << std::setw(9) << name;
+	msg << "SF:" << std::left << std::setw(4) << tti / 10 << "-" << tti % 10;
+	// msg << "[" << std::left << std::setw(2) << idx  << "]";
+	msg << GREEN << " -- RNTI: " << std::left << std::setw(5) << rnti << RESET;
+	msg << WHITE << " -- DCI: " << std::left << std::setw(4) << format << RESET;
+	msg << YELLOW << " -- Mod: " << std::left << std::setw(6) << mod << RESET;
+	msg << " -- MCS: " << std::left << std::setw(3) << mcs_idx;
 	// std::string re_tx = retx?(" -- reTX"):(" -- NewTX");
-	// std::cout << RED << std::left << std::setw(9) << re_tx << RESET;
-	std::cout << CYAN << " -- nof_TB: " << std::left << pdsch_cfg->grant.nof_tb << RESET;
-	std::cout << BLUE << " -- Byte: " << std::left << std::setw(5) << length << RESET;
-	// std::cout << std::setprecision(2) << GREEN << " -- rsrp: " << ce_res->rsrp_dbm << " --rsrq: " \
-    //     << ce_res->rsrq_db << " --SNR: " << ce_res->snr_db << " --CFO: " << ce_res->cfo << RESET;
-	std::cout << " -- Antenna SNR: " << std::left << std::setw(4) << ce_res->snr_ant_port_db[0][0]
-			  << "|" << std::setw(4) << ce_res->snr_ant_port_db[1][1] << RESET;
-	std::cout << " -- SNR: " << std::left << std::setprecision(3) << std::setw(5) << ce_res->snr_db << RESET;
-	std::cout << RESET << " -- Result: ";
+	// msg << RED << std::left << std::setw(9) << re_tx << RESET;
+	msg << CYAN << " -- nof_TB: " << std::left << pdsch_cfg->grant.nof_tb << RESET;
+	msg << BLUE << " -- Byte: " << std::left << std::setw(5) << length << RESET;
+	// msg << std::setprecision(2) << GREEN << " -- rsrp: " << ce_res->rsrp_dbm << " --rsrq: " \
+	//     << ce_res->rsrq_db << " --SNR: " << ce_res->snr_db << " --CFO: " << ce_res->cfo << RESET;
+	msg << " -- Antenna SNR: " << std::left << std::setw(4) << ce_res->snr_ant_port_db[0][0]
+			<< "|" << std::setw(4) << ce_res->snr_ant_port_db[1][1] << RESET;
+	msg << " -- SNR: " << std::left << std::setprecision(3) << std::setw(5) << ce_res->snr_db << RESET;
+	msg << RESET << " -- Result: ";
 	if (result)
 	{
-		std::cout << std::left << std::setw(8) << GREEN << "SUCCESS";
+		msg << std::left << std::setw(8) << GREEN << "SUCCESS";
 	}
 	else
 	{
-		std::cout << std::left << std::setw(8) << RED << "FAILED";
+		msg << std::left << std::setw(8) << RED << "FAILED";
 	}
-	std::cout << RESET << std::endl;
+	msg << RESET << std::endl;
+	if(DEBUG_DCI_PRINT==1){
+		std::cout << msg.str();
+	}
 }
 
 std::string PDSCH_Decoder::dci_format(int format)

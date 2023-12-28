@@ -273,7 +273,9 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
             tmp_sum += sf_power->getRBPowerUL().at(ul_cfg.pusch.grant.n_prb[0] + rb_idx);
         }
         falcon_signal_power = tmp_sum / ul_cfg.pusch.grant.L_prb;
-        print_debug(decoding_mem, info, modulation_mode, signal_power, enb_ul.chest_res.noise_estimate_dbm, falcon_signal_power);
+        srsran_dci_format_t cur_format = decoding_mem.format; // BWS
+		std::string dci_fm = dci_format_ul(cur_format); // BWS
+        print_debug(decoding_mem, dci_fm, info, modulation_mode, signal_power, enb_ul.chest_res.noise_estimate_dbm, falcon_signal_power);
     }
 
     if (pusch_res.crc == true && ul_cfg.pusch.grant.tb.tbs != 0)
@@ -711,32 +713,40 @@ void PUSCH_Decoder::work_prach()
         }
     }
 }
-
-void PUSCH_Decoder::print_debug(DCI_UL &decoding_mem, std::string offset_name, std::string modulation_mode, float signal_pw, double noise, double falcon_sgl_pwr)
+// BWS FIO FILE_IDX_UL_DCI 
+void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem, 
+                                    std::string format,
+                                    std::string offset_name, 
+                                    std::string modulation_mode, 
+                                    float signal_pw, 
+                                    double noise, 
+                                    double falcon_sgl_pwr)
 {
-    std::cout << std::left << std::setw(12) << offset_name << " SF: ";
-    std::cout << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
-    std::cout << " -- RNTI: ";
-    std::cout << std::left << std::setw(6) << decoding_mem.rnti;
+    std::stringstream msg;
+    msg << std::left << std::setw(12) << offset_name << " SF: ";
+    msg << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
+    msg << " -- RNTI: ";
+    msg << std::left << std::setw(6) << decoding_mem.rnti;
+    msg << WHITE << " -- DCI: " << std::left << std::setw(4) << format << RESET;
 
-    std::cout << GREEN << " -- DL-UL(us): ";
+    msg << GREEN << " -- DL-UL(us): ";
     if (enb_ul.chest_res.ta_us > 0)
     {
-        std::cout << "+";
+        msg << "+";
     }
     else if (enb_ul.chest_res.ta_us < 0)
     {
-        std::cout << "-";
+        msg << "-";
     }
     else
     {
-        std::cout << " ";
+        msg << " ";
     }
-    std::cout << std::left << std::setw(5) << abs(enb_ul.chest_res.ta_us) << RESET;
-    std::cout << " -- SNR(db): ";
-    std::cout << std::left << std::setw(6) << std::setprecision(3) << enb_ul.chest_res.snr_db;
+    msg << std::left << std::setw(5) << abs(enb_ul.chest_res.ta_us) << RESET;
+    msg << " -- SNR(db): ";
+    msg << std::left << std::setw(6) << std::setprecision(3) << enb_ul.chest_res.snr_db;
 
-    // std::cout << " -- F_Pwr: ";
+    // msg << " -- F_Pwr: ";
     // std::string pwr_sign;
     // int width = 0;
     // if (falcon_sgl_pwr < 0) {
@@ -747,40 +757,82 @@ void PUSCH_Decoder::print_debug(DCI_UL &decoding_mem, std::string offset_name, s
     //     pwr_sign = " ";
     //     width = 6;
     // }
-    // std::cout << std::left << pwr_sign << std::setw(width) << std::setprecision(3) << falcon_sgl_pwr;
+    // msg << std::left << pwr_sign << std::setw(width) << std::setprecision(3) << falcon_sgl_pwr;
 
-    std::cout << " -- CQI RQ: ";
-    std::cout << decoding_mem.ran_ul_dci->cqi_request << "|" << decoding_mem.ran_ul_dci->multiple_csi_request_present;
+    msg << " -- CQI RQ: ";
+    msg << decoding_mem.ran_ul_dci->cqi_request << "|" << decoding_mem.ran_ul_dci->multiple_csi_request_present;
 
-    std::cout << " -- Noise Pwr: ";
-    std::cout << std::left << std::setw(6) << std::setprecision(3) << noise;
+    msg << " -- Noise Pwr: ";
+    msg << std::left << std::setw(6) << std::setprecision(3) << noise;
 
-    std::cout << YELLOW << " -- MCS: ";
-    std::cout << std::left << std::setw(3) << ul_cfg.pusch.grant.tb.mcs_idx << RESET;
+    msg << YELLOW << " -- MCS: ";
+    msg << std::left << std::setw(3) << ul_cfg.pusch.grant.tb.mcs_idx << RESET;
 
-    std::cout << YELLOW << " -- ";
-    std::cout << std::left << std::setw(6) << modulation_mode << RESET;
+    msg << YELLOW << " -- ";
+    msg << std::left << std::setw(6) << modulation_mode << RESET;
 
-    std::cout << " -- ";
+    msg << " -- ";
     if (pusch_res.crc == false)
     {
-        std::cout << RED << std::setw(7) << "FAILED" << RESET;
-        std::cout << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
+        msg << RED << std::setw(7) << "FAILED" << RESET;
+        msg << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
     }
     else
     {
-        std::cout << BOLDGREEN << std::setw(7) << "SUCCESS" << RESET;
-        std::cout << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
+        msg << BOLDGREEN << std::setw(7) << "SUCCESS" << RESET;
+        msg << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
     }
     if (decoding_mem.is_rar_gant)
     {
-        std::cout << " -- RAR";
+        msg << " -- RAR";
     }
     if (decoding_mem.is_retx == 1)
     {
-        std::cout << " -- ReTX-UL";
+        msg << " -- ReTX-UL";
     }
-    std::cout << std::endl;
+    msg << std::endl;
+    if(DEBUG_DCI_PRINT==1){
+		std::cout << msg.str();
+	}
+}
+
+std::string PUSCH_Decoder::dci_format_ul(int format)
+{
+	std::string ret = "UNKNOWN";
+	switch (format)
+	{
+	case 0:
+		ret = "0";
+		break;
+	case 1:
+		ret = "1";
+		break;
+	case 2:
+		ret = "1A";
+		break;
+	case 3:
+		ret = "1B";
+		break;
+	case 4:
+		ret = "1C";
+		break;
+	case 5:
+		ret = "1D";
+		break;
+	case 6:
+		ret = "2";
+		break;
+	case 7:
+		ret = "2A";
+		break;
+	case 8:
+		ret = "2B";
+		break;
+	default:
+		ret = "UNKNOWN";
+		break;
+	}
+	return ret;
 }
 
 void PUSCH_Decoder::print_success(DCI_UL &decoding_mem, std::string offset_name, int table)

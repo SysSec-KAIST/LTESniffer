@@ -23,6 +23,8 @@
 #include "srsran/common/gen_mch_tables.h"
 #include "srsran/phy/io/filesink.h"
 
+#include "include/Sniffer_file_defs.h" // BWS
+
 #ifdef __cplusplus
 }
 #undef I // Fix complex.h #define I nastiness when using C++
@@ -57,7 +59,15 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
     }
   }
   std::cout << str_cur_time << std::endl;
-  // std::string pcap_file_name = "ul_pcap_" + str_cur_time + "pcap";
+
+  std::string mode_str = "NA";
+  if(sniffer_mode==0){mode_str = "DL only";}
+  else if(sniffer_mode==1){mode_str = "UL only";}
+  else if(sniffer_mode==2){mode_str = "DL & UL";}
+  std::cout << "Sniffer Mode: " << mode_str << std::endl; // BWS
+
+  // File Writers
+    // std::string pcap_file_name = "ul_pcap_" + str_cur_time + "pcap";
   std::string pcap_file_name;
   std::string pcap_file_name_api = "api_collector.pcap";
   if (sniffer_mode == DL_MODE){
@@ -65,10 +75,16 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   } else {
     pcap_file_name = "ltesniffer_ul_mode.pcap";
   }
-
-  std::cout << "Sniffer Mode: " << sniffer_mode << std::endl; // BWS
-
   pcapwriter.open(pcap_file_name, pcap_file_name_api, 0);
+  // BWS
+  filewriter_objs[FILE_IDX_API].open(("LETTUCE_api_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_DL].open(("LETTUCE_dl_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_DL_DCI].open(("LETTUCE_dl_dci_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_UL].open(("LETTUCE_ul_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_UL_DCI].open(("LETTUCE_ul_dci_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_RAR].open(("LETTUCE_rar_" + str_cur_time + "stat")); // BWS
+  filewriter_objs[FILE_IDX_OTHER].open(("LETTUCE_other_" + str_cur_time + "stat")); // BWS
+
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
   /*Set multi offset in ULSchedule*/
@@ -632,6 +648,14 @@ void LTESniffer_Core::handleSignal() {
 
 LTESniffer_Core::~LTESniffer_Core(){
   pcapwriter.close();
+  // BWS
+  filewriter_objs[FILE_IDX_API].close(); // BWS
+  filewriter_objs[FILE_IDX_DL].close(); // BWS
+  filewriter_objs[FILE_IDX_DL_DCI].close(); // BWS
+  filewriter_objs[FILE_IDX_UL].close(); // BWS
+  filewriter_objs[FILE_IDX_UL_DCI].close(); // BWS
+  filewriter_objs[FILE_IDX_RAR].close(); // BWS
+  filewriter_objs[FILE_IDX_OTHER].close(); // BWS
   // delete        harq_map;
   // harq_map    = nullptr;
   // delete        phy;

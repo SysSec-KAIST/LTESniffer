@@ -75,9 +75,11 @@ public:
     void set_configed() { configed = true;}
     bool get_configed() { return configed;}
 
+    std::string dci_format_ul(int format);
     std::string modulation_mode_string(int mode, bool max_64qam);
     std::string modulation_mode_string_256(int idx);
     void print_debug(DCI_UL &decoding_mem, 
+                     std::string format,
                      std::string offset_name, 
                      std::string modulation_mode,
                      float signal_pw,

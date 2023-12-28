@@ -33,6 +33,7 @@
 #include "srsran/common/mac_pcap.h"
 #include "Phy.h"
 #include "PcapWriter.h"
+#include "FileWriter.h" // BWS
 #include "HARQ.h"
 #include <ctime>
 #include <iostream>
@@ -111,6 +112,7 @@ private:
   std::mutex              harq_map_mutex;
   Phy                     *phy;
   LTESniffer_pcap_writer  pcapwriter;
+  LTESniffer_stat_writer  filewriter_objs[6]; // BWS
   srsran::mac_pcap        mac_pcap;
   int                     mcs_tracking_mode;
   MCSTracking             mcs_tracking;

@@ -14,8 +14,24 @@ using namespace std;
 
 int main(int argc, char** argv) {
   cout << endl;
-  cout << "LTESniffer" << endl;
+  cout << "LTESniffer Start!" << endl;
   cout << endl;
+
+  // BWS
+  auto now = std::chrono::system_clock::now();
+  std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+  std::string str_cur_time(std::ctime(&cur_time));
+  for(std::string::iterator it = str_cur_time.begin(); it != str_cur_time.end(); ++it) {
+    if (*it == ' '){
+      *it = '_';
+    } else if (*it == ':'){
+      *it = '.';
+    } else if (*it == '\n'){
+      *it = '.';
+    }
+  }
+  std::string error_filename = "LETTUCE_error_" + str_cur_time + "stat";
+  FILE * myfile = freopen(error_filename.c_str(),"w",stderr);
 
   Args args;
   ArgManager::parseArgs(args, argc, argv);
@@ -28,6 +44,13 @@ int main(int argc, char** argv) {
   signalGate.attach(SnifferCore);
 
   bool success = SnifferCore.run();
+
+  // BWS
+  cout << endl;
+  cout << "LTESniffer End!" << endl;
+  cout << endl;
+  myfile = freopen("/dev/tty","r",stderr);
+  fclose (stderr);
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
