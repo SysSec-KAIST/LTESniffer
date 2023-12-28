@@ -38,6 +38,7 @@
 
 #define DL_MODE     0
 #define UL_MODE     1
+#define DL_UL_MODE  2
 
 #define ID_RAN_VAL  0
 #define ID_TMSI     1

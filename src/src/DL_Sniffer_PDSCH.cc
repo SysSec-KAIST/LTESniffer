@@ -789,7 +789,7 @@ int PDSCH_Decoder::decode_dl_mode()
 			{
 				pdsch_res[tb].crc = false;
 			}
-			ltesniffer_ue_spec_config_t ue_config = mcs_tracking->get_ue_config_rnti(cur_rnti); // find p_a from database
+			ltesniffer_ue_spec_config_t ue_config = mcs_tracking->get_ue_config_rnti(cur_rnti, 0); // find p_a from database // BWS
 			pdsch_cfg->p_a = ue_config.p_a;														// update p_a from database
 			bool tb_en[SRSRAN_MAX_CODEWORDS]{cur_grant->tb[0].enabled, cur_grant->tb[1].enabled};
 			int mimo_ret = SRSRAN_SUCCESS;

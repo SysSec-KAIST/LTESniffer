@@ -1476,16 +1476,45 @@ void MCSTracking::update_ue_config_rnti(uint16_t rnti, ltesniffer_ue_spec_config
             ul_iter->second.ue_spec_config = ue_spec_config;
         }
     }
+    else if (sniffer_mode == DL_UL_MODE) // BWS
+    {
+        // Downlink
+        std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
+        dl_iter = tracking_database_dl_mode.find(rnti);
+        if (dl_iter != tracking_database_dl_mode.end())
+        {
+            dl_iter->second.ue_spec_config = ue_spec_config;
+        }
+        else
+        {
+            add_RNTI_dl(rnti, DL_SNIFFER_UNKNOWN_TABLE);
+            dl_iter = tracking_database_dl_mode.find(rnti);
+            dl_iter->second.ue_spec_config = ue_spec_config;
+        }
+        // Uplink
+        std::map<uint16_t, ul_sniffer_tracking_t>::iterator ul_iter;
+        ul_iter = tracking_database_ul_mode.find(rnti);
+        if (ul_iter != tracking_database_ul_mode.end())
+        {
+            ul_iter->second.ue_spec_config = ue_spec_config;
+        }
+        else
+        {
+            add_RNTI_ul(rnti, UL_SNIFFER_UNKNOWN_MOD);
+            ul_iter = tracking_database_ul_mode.find(rnti);
+            ul_iter->second.ue_spec_config = ue_spec_config;
+        }
+    }
     trackinglock.unlock();
 }
 
-ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti)
+ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti, int DL_or_UL)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     ltesniffer_ue_spec_config_t ue_spec_config = {};
     ue_spec_config = default_ue_spec_config;
     ue_spec_config.has_ue_config = false;
-    if (sniffer_mode == DL_MODE)
+    if (DL_or_UL == 0) // BWS
     {
         std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
         dl_iter = tracking_database_dl_mode.find(rnti);
@@ -1498,7 +1527,7 @@ ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti)
             // nothing
         }
     }
-    else if (sniffer_mode == UL_MODE)
+    else if (DL_or_UL == 1) // BWS
     {
         std::map<uint16_t, ul_sniffer_tracking_t>::iterator ul_iter;
         ul_iter = tracking_database_ul_mode.find(rnti);

@@ -155,6 +155,9 @@ SRSRAN_API srsran_cp_t srsran_sync_detect_cp(srsran_sync_t* q, const cf_t* input
 /* Sets the threshold for peak comparison */
 SRSRAN_API void srsran_sync_set_threshold(srsran_sync_t* q, float threshold);
 
+/* Gets the threshold for peak comparison // BWS */
+float srsran_sync_get_threshold(srsran_sync_t* q);
+
 /* Gets the subframe idx (0 or 5) */
 SRSRAN_API uint32_t srsran_sync_get_sf_idx(srsran_sync_t* q);
 

@@ -65,11 +65,16 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   } else {
     pcap_file_name = "ltesniffer_ul_mode.pcap";
   }
+
+  std::cout << "Sniffer Mode: " << sniffer_mode << std::endl; // BWS
+
   pcapwriter.open(pcap_file_name, pcap_file_name_api, 0);
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
   /*Set multi offset in ULSchedule*/
-  ulsche.set_multi_offset(args.sniffer_mode);
+  int multi_offset_toggle = 0; // BWS
+  if((sniffer_mode == UL_MODE) || (sniffer_mode == DL_UL_MODE)) {multi_offset_toggle = 1;}
+  ulsche.set_multi_offset(multi_offset_toggle); // BWS
   /*Create PHY*/
   phy = new Phy(args.rf_nof_rx_ant,
                 args.nof_sniffer_thread,
@@ -188,6 +193,18 @@ bool LTESniffer_Core::run(){
       srsran_rf_set_rx_freq(&rf, args.rf_nof_rx_ant, args.rf_freq + args.file_offset_freq);
     } else if (sniffer_mode == DL_MODE && args.ul_freq != 0){
         ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode \n");
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq != 0){ // BWS
+      printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
+      if (srsran_rf_set_rx_freq(&rf, 0, args.rf_freq + args.file_offset_freq)) {
+        ///ERROR("Tunning DL Freq failed\n");
+      }
+      /*Uplink freg*/
+      printf("Tunning UL receiver to %.3f MHz\n", (double) (args.ul_freq / 1000000));
+      if (srsran_rf_set_rx_freq(&rf, 1, args.ul_freq )){
+        //ERROR("Tunning UL Freq failed \n");
+      }
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq == 0){ // BWS
+      ERROR("Uplink Frequency must be defined in the UL Sniffer Mode \n");
     }
 
     if (args.cell_search){
@@ -308,6 +325,9 @@ bool LTESniffer_Core::run(){
     ERROR("Error initaiting UE MIB decoder");
     exit(-1);
   }
+
+  // BWS
+  srsran_sync_set_threshold(&ue_sync.sfind, 2.0);
 
   // Disable CP based CFO estimation during find
   ue_sync.cfo_current_value       = search_cell_cfo / 15000;
@@ -460,7 +480,8 @@ bool LTESniffer_Core::run(){
         sfn = 0;
       }
       total_sf++;
-      if ((total_sf%1000)==0 && (api_mode == -1)){
+      // BWS
+      if ((total_sf%1000)==0){// && (api_mode == -1)){
         auto now = std::chrono::system_clock::now();
         std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
         std::string str_cur_time(std::ctime(&cur_time));
@@ -477,6 +498,12 @@ bool LTESniffer_Core::run(){
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           break;
         case UL_MODE:
+          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
+          break;
+        case DL_UL_MODE: // BWS
+          // Downlink
+          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
+          // Uplink
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           break;
         default:
@@ -499,6 +526,15 @@ bool LTESniffer_Core::run(){
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           mcs_tracking_timer = 0;
           break;
+        case DL_UL_MODE: // BWS
+          // Downlink
+          if (api_mode == -1) {mcs_tracking.print_database_dl();}
+          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
+          if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
+          // Uplink
+          if (api_mode == -1) {mcs_tracking.print_database_ul();}
+          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
+          break;
         default:
           break;
         }
@@ -518,10 +554,18 @@ bool LTESniffer_Core::run(){
         srsran_pbch_decode_reset(&ue_mib.pbch);
         nof_lost_sync = 0;
       }
+      // BWS
+      if(srsran_sync_get_peak_value(&ue_sync.sfind) > srsran_sync_get_threshold(&ue_sync.sfind)){
+        cout << "Found PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
+                ", Threshold: " << srsran_sync_get_threshold(&ue_sync.sfind) <<
+                ", FrameCnt: " << ue_sync.frame_total_cnt <<
+                " State: " << ue_sync.state << endl;
+        cout << "Missed PSS Attempts: " << nof_lost_sync << endl;
+      }
       nof_lost_sync++;
-      cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
-              ", FrameCnt: " << ue_sync.frame_total_cnt <<
-              " State: " << ue_sync.state << endl;
+      // cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
+      //         ", FrameCnt: " << ue_sync.frame_total_cnt <<
+      //         " State: " << ue_sync.state << endl;
     }
     sf_cnt++;
 
@@ -536,6 +580,14 @@ bool LTESniffer_Core::run(){
       if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
       break;
     case UL_MODE:
+      mcs_tracking.merge_all_database_ul();
+      if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
+      break;
+    case DL_UL_MODE: // BWS
+      // Downlink
+      mcs_tracking.merge_all_database_dl();
+      if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
+      // Uplink
       mcs_tracking.merge_all_database_ul();
       if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
       break;

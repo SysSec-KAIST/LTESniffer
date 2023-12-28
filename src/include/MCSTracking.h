@@ -132,7 +132,7 @@ public:
     
     /*Manage UE-specific-configuration*/
     void                        update_ue_config_rnti(uint16_t rnti, ltesniffer_ue_spec_config_t ue_spec_config);
-    ltesniffer_ue_spec_config_t get_ue_config_rnti(uint16_t rnti);
+    ltesniffer_ue_spec_config_t get_ue_config_rnti(uint16_t rnti, int DL_or_UL);
     void                        update_default_ue_config(ltesniffer_ue_spec_config_t ue_spec_config);
     
     double      get_interval() { return interval;}

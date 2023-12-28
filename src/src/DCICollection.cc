@@ -115,7 +115,7 @@ void DCICollection::addCandidate(dci_candidate_t& cand,
     {
       ran_dci_dl->mcs_table = DL_SNIFFER_64QAM_TABLE;
     } else {
-      if (sniffer_mode == DL_MODE){
+      if ((sniffer_mode == DL_MODE)||(sniffer_mode == DL_UL_MODE)){ // BWS
         ran_dci_dl->mcs_table = mcs_tracking->find_tracking_info_RNTI_dl(cand.rnti);
       }else{
         ran_dci_dl->mcs_table = DL_SNIFFER_UNKNOWN_TABLE;

@@ -430,7 +430,7 @@ void PUSCH_Decoder::decode()
                 // ul_cfg.pusch.uci_cfg.cqi.rank_is_not_one            = (decoding_mem.nof_ack == 2)?true:false;
 
                 /*get UE-specific configuration from database*/
-                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti);
+                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti, 1); // BWS
                 ul_cfg.pusch.uci_cfg.cqi.type = ue_config.cqi_config.type;
                 ul_cfg.pusch.uci_offset = ue_config.uci_config;
                 /*If eNB requests for Aperiodic CSI report*/

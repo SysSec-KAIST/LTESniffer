@@ -260,6 +260,12 @@ void srsran_sync_set_threshold(srsran_sync_t* q, float threshold)
   q->threshold = threshold;
 }
 
+// BWS
+float srsran_sync_get_threshold(srsran_sync_t* q)
+{
+  return q->threshold;
+}
+
 void srsran_sync_sss_en(srsran_sync_t* q, bool enabled)
 {
   q->sss_en = enabled;
