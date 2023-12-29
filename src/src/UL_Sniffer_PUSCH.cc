@@ -725,6 +725,13 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
                                     double falcon_sgl_pwr)
 {
     std::stringstream msg;
+    
+    auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second = str_cur_time.substr(11,8);
+	msg << "[" << cur_time_second << "]: ";
+
     msg << std::left << std::setw(12) << offset_name << " SF: ";
     msg << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
     msg << " -- RNTI: ";
@@ -960,7 +967,7 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
     if(FILE_WRITE==1){
 		(*filewriter_objs)[FILE_IDX_API]->write_stats(msg_api.str());
 	}
-}
+} // UL
 
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {

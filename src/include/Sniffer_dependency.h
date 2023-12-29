@@ -61,6 +61,7 @@
 #define MSG_ID_RES  3
 #define MSG_UE_CAP  4
 #define MSG_PAGING  5
+#define MSG_RAR     6
 
 struct DCI_BASE {
     DCI_BASE();

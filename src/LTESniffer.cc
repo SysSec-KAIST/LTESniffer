@@ -30,8 +30,6 @@ int main(int argc, char** argv) {
       *it = '.';
     }
   }
-  std::string error_filename = "LETTUCE_error_" + str_cur_time + "stat";
-  FILE * myfile = freopen(error_filename.c_str(),"w",stderr);
 
   Args args;
   ArgManager::parseArgs(args, argc, argv);
@@ -44,10 +42,6 @@ int main(int argc, char** argv) {
   signalGate.attach(SnifferCore);
 
   bool success = SnifferCore.run();
-
-  // BWS
-  myfile = freopen("/dev/tty","r",stderr);
-  fclose (stderr);
 
   cout << endl;
   cout << "LTESniffer End!" << endl;

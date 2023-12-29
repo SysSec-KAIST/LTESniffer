@@ -240,6 +240,7 @@ void MCSTracking::merge_all_database_ul()
 
 void print_statistic_rnti_ul_mode(std::stringstream &msg, std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter, int num, std::string info)
 {
+    msg << "            ";
     msg << std::left << std::setw(5) << num;
     msg << std::left << std::setw(9) << iter->first;
     msg << std::left << std::setw(12) << info;
@@ -469,6 +470,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
         if (iter->second.mcs_mod == UL_SNIFFER_16QAM_MAX && iter->second.nof_active > 0)
         {
             nof_16qam++;
+            msg << "            ";
             msg << std::left << std::setw(5) << num;
             msg << std::left << std::setw(9) << iter->first;
             msg << std::left << std::setw(12) << "16QAM";
@@ -523,6 +525,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
         if (iter->second.mcs_mod == UL_SNIFFER_64QAM_MAX && iter->second.nof_active > 0)
         {
             nof_64qam++;
+            msg << "            ";
             msg << std::left << std::setw(5) << num;
             msg << std::left << std::setw(9) << iter->first;
             msg << std::left << std::setw(12) << "64QAM";
@@ -576,6 +579,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     {
         if (iter->second.mcs_mod == UL_SNIFFER_256QAM_MAX && iter->second.nof_active > 0)
         {
+            msg << "            ";
             msg << std::left << std::setw(5) << num;
             msg << std::left << std::setw(9) << iter->first;
             msg << std::left << std::setw(12) << "256QAM";
@@ -632,6 +636,8 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     }
     msg << std::endl;
 
+	msg << "[" << cur_time_second << "]: ";
+
     msg << std::left << std::setw(5) << "Num ";
     msg << std::left << std::setw(9) << "RNTI";
     msg << std::left << std::setw(12) << "Max Mod";
@@ -648,6 +654,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
         {
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
+                msg << "            ";
                 msg << std::left << std::setw(5) << num;
                 msg << std::left << std::setw(9) << iter->first;
                 msg << std::left << std::setw(12) << "Unknown";
@@ -712,6 +719,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
         {
             if (!(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
+                msg << "            ";
                 msg << std::left << std::setw(5) << num;
                 msg << std::left << std::setw(9) << iter->first;
                 msg << std::left << std::setw(12) << "Unknown";
@@ -1023,6 +1031,7 @@ void MCSTracking::merge_all_database_dl()
 
 void print_statistic_rnti(std::stringstream &msg,std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter, int num, std::string info)
 {
+    msg << "            ";
     msg << std::left << std::setw(5) << num;
     msg << std::left << std::setw(9) << iter->first;
     msg << std::left << std::setw(12) << info;
@@ -1222,6 +1231,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
         if (iter->second.mcs_table == DL_SNIFFER_64QAM_TABLE)
         {
             nof_64qam++;
+            msg << "            ";
             msg << std::left << std::setw(5) << num;
             msg << std::left << std::setw(9) << iter->first;
             msg << std::left << std::setw(12) << "64QAM";
@@ -1249,6 +1259,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     {
         if (iter->second.mcs_table == DL_SNIFFER_256QAM_TABLE)
         {
+            msg << "            ";
             msg << std::left << std::setw(5) << num;
             msg << std::left << std::setw(9) << iter->first;
             msg << std::left << std::setw(12) << "256QAM";
@@ -1279,6 +1290,8 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     }
     msg << std::endl;
 
+	msg << "[" << cur_time_second << "]: ";
+
     msg << std::left << std::setw(5) << "Num ";
     msg << std::left << std::setw(9) << "RNTI";
     msg << std::left << std::setw(12) << "Table";
@@ -1299,6 +1312,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
         {
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0 && iter->second.nof_active > 0))
             {
+                msg << "            ";
                 msg << std::left << std::setw(5) << num;
                 msg << std::left << std::setw(9) << iter->first;
                 msg << std::left << std::setw(12) << "Unknown";
@@ -1337,6 +1351,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
         {
             if ((iter->second.nof_active > 0) && !(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
+                msg << "            ";
                 msg << std::left << std::setw(5) << num;
                 msg << std::left << std::setw(9) << iter->first;
                 msg << std::left << std::setw(12) << "Unknown";

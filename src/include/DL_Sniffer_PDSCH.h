@@ -150,7 +150,7 @@ public:
     void set_target_rnti(uint16_t rnti) {target_rnti = rnti;}
     void set_debug_mode(bool debug) { en_debug = debug;}
     void set_api_mode(int api_mode_) { api_mode = api_mode_;}
-    void print_api_dl(uint32_t tti, uint16_t rnti, int ident, std::string value, int msg);
+    void print_api_dl(uint32_t tti, uint16_t rnti, int ident, std::string value, int msg, uint32_t ta_rnti);
 
 private:
     int         api_mode            = -1; 

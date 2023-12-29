@@ -24,6 +24,8 @@
 #include "srsran/phy/io/filesink.h"
 
 #include "include/Sniffer_file_defs.h" // BWS
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #ifdef __cplusplus
 }
@@ -86,13 +88,23 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   }
   pcapwriter.open(pcap_file_name, pcap_file_name_api, 0);
   // BWS
-  filewriter_objs[FILE_IDX_API]->open(("LETTUCE_api_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_DL]->open(("LETTUCE_dl_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_DL_DCI]->open(("LETTUCE_dl_dci_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_UL]->open(("LETTUCE_ul_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_UL_DCI]->open(("LETTUCE_ul_dci_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_RAR]->open(("LETTUCE_rar_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_OTHER]->open(("LETTUCE_other_" + str_cur_time + "stat")); // BWS
+  std::string stat_folder = "/home/stats/";
+
+  struct stat st = {0};
+  if (stat(stat_folder.c_str(), &st) == -1) {
+      mkdir(stat_folder.c_str(), 0700);
+  }
+
+  std::string error_filename = stat_folder + "LETTUCE_error_" + str_cur_time + "ansi";
+  errfile = freopen(error_filename.c_str(),"w",stderr);
+
+  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_OTHER]->open((stat_folder + "LETTUCE_other_" + str_cur_time + "ansi")); // BWS
 
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
@@ -659,7 +671,10 @@ void LTESniffer_Core::handleSignal() {
 
 LTESniffer_Core::~LTESniffer_Core(){
   pcapwriter.close();
-    // BWS
+  // BWS
+  errfile = freopen("/dev/tty","r",stderr);
+  fclose (stderr);
+  // BWS
   filewriter_objs[FILE_IDX_API]->close(); // BWS
   filewriter_objs[FILE_IDX_DL]->close(); // BWS
   filewriter_objs[FILE_IDX_DL_DCI]->close(); // BWS

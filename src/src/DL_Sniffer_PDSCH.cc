@@ -106,7 +106,7 @@ int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t *sdu_ptr, int length)
 					{
 						uint8_t temp_imsi = paging_record.ue_id.imsi()[k];
 						imsi_str.append(std::to_string(temp_imsi));
-						print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING);
+						print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING, -1);
 						mcs_tracking->increase_nof_api_msg();
 						ret = SRSRAN_SUCCESS;
 					}
@@ -119,7 +119,7 @@ int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t *sdu_ptr, int length)
 					std::stringstream ss;
 					ss << std::hex << m_tmsi;
 					std::string m_tmsi_str = ss.str();
-					print_api_dl(dl_sf->tti, 65534, ID_TMSI, m_tmsi_str, MSG_PAGING);
+					print_api_dl(dl_sf->tti, 65534, ID_TMSI, m_tmsi_str, MSG_PAGING, -1);
 					mcs_tracking->increase_nof_api_msg();
 					ret = SRSRAN_SUCCESS;
 				}
@@ -285,7 +285,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 								std::string con_res_str = temp_con_res_str.substr(3, 8);
 								// printf("[API] SF: %d-%d Found RRC Connection Setup, Contention Resolution = %s, RNTI = %d \n",
 								// 		tti/10, tti%10, con_res_str.c_str(), cur_rnti);
-								print_api_dl(tti, cur_rnti, ID_CON_RES, con_res_str, MSG_CON_SET);
+								print_api_dl(tti, cur_rnti, ID_CON_RES, con_res_str, MSG_CON_SET, -1);
 								mcs_tracking->increase_nof_api_msg();
 								found_res = true;
 							}
@@ -335,6 +335,13 @@ int PDSCH_Decoder::decode_ul_mode(uint32_t rnti, std::vector<DL_Sniffer_rar_resu
 			int ret = run_rar_decode(cur_format, cur_ran_dci_dl, cur_grant, cur_rnti, result);
 			if (ret == SRSRAN_SUCCESS)
 			{
+				// BWS TA Print
+				float ta_min = (float) result.ta * 78.12; // ref: https://howltestuffworks.blogspot.com/2014/07/timing-advance-and-time-alignment-timer.html
+				float ta_max = (float) (result.ta + 1) * 78.12; // meters multiply by 78 meters for shortcut
+				// {min}-{max} meters ... TA_RNTI does not change per user, does per carrier?
+				std:string ta_str = std::to_string((int) ta_min) + " to " + std::to_string((int) ta_max) + " m";
+				print_api_dl(dl_sf->tti, result.t_crnti, MSG_RAR, ta_str, MSG_RAR, cur_rnti);
+				//print_api_dl(dl_sf->tti, cur_rnti, MSG_RAR, ta_str, MSG_RAR);
 				rar_result->push_back(std::move(result));
 			}
 			else
@@ -603,6 +610,7 @@ int PDSCH_Decoder::unpack_rar_response_ul_mode(uint8_t *payload, int length, DL_
 			ul_sf.tti = dl_sf->tti;
 			ul_sniffer_ra_ul_dci_to_grant(&falcon_ue_dl->q->cell, &ul_sf, &hopping_cfg, &dci_ul, &result.ran_ul_grant);
 			rntiManager.activateAndRefresh(result.t_crnti, 0, ActivationReason::RM_ACT_RAR); // add RNTI in RAR response to active list
+			// BWS
 			// std::cout << " RAR: " << "TA = " << result.ta;
 			// std::cout << " -- T-CRNTI: " << result.t_crnti;
 			// std::cout << " -- GRANT: ";
@@ -900,6 +908,7 @@ int PDSCH_Decoder::decode_dl_mode()
 						std::string dci_fm = dci_format(cur_format);
 						std::string mod = mod_sche(cur_grant->tb[tb].mod);
 						std::string table_name = decoding_mem.mcs_table ? ("256") : ("64");
+						table_name = "[" + table_name + "]";
 						if (pdsch_res[tb].crc && result_length > 0)
 						{
 							write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
@@ -1032,7 +1041,7 @@ int PDSCH_Decoder::decode_dl_mode()
 						}
 						if (cur_rnti != 65535 && cur_grant->tb[tb].enabled && (target_rnti == 0 || cur_rnti == target_rnti) && en_debug)
 						{
-							print_debug_dl("Unkown64", tti, decoding_mem.rnti, dci_fm, mod, decoding_mem.ran_dci_dl->tb[0].mcs_idx, harq_ret[tb],
+							print_debug_dl("[Unknown-64]", tti, decoding_mem.rnti, dci_fm, mod, decoding_mem.ran_dci_dl->tb[0].mcs_idx, harq_ret[tb],
 										   nof_tb, result_length, pdsch_res[tb].crc, &falcon_ue_dl->q->chest_res);
 						}
 					}
@@ -1091,7 +1100,7 @@ int PDSCH_Decoder::decode_dl_mode()
 							}
 							if (cur_rnti != 65535 && cur_grant256->tb[tb].enabled && (target_rnti == 0 || cur_rnti == target_rnti) && en_debug)
 							{
-								print_debug_dl("Unkown256", tti, decoding_mem.rnti, dci_fm, mod, decoding_mem.ran_dci_dl->tb[0].mcs_idx, harq_ret[tb],
+								print_debug_dl("[Unknown-256]", tti, decoding_mem.rnti, dci_fm, mod, decoding_mem.ran_dci_dl->tb[0].mcs_idx, harq_ret[tb],
 											   nof_tb, result_length, pdsch_res[tb].crc, &falcon_ue_dl->q->chest_res);
 							}
 						}
@@ -1163,7 +1172,14 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 								   srsran_chest_dl_res_t *ce_res)
 {
 	std::stringstream msg;
-	msg << std::left << std::setw(9) << name;
+
+	auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second = str_cur_time.substr(11,8);
+	msg << "[" << cur_time_second << "]: ";
+
+	msg << std::left << std::setw(15) << name;
 	msg << "SF:" << std::left << std::setw(4) << tti / 10 << "-" << tti % 10;
 	// msg << "[" << std::left << std::setw(2) << idx  << "]";
 	msg << GREEN << " -- RNTI: " << std::left << std::setw(5) << rnti << RESET;
@@ -1302,6 +1318,9 @@ std::string convert_id_name_dl(int id)
 	case 3:
 		ret = "IMSI";
 		break;
+	case 6:
+		ret = "Timing Advance";
+		break;
 	default:
 		ret = "-";
 		break;
@@ -1331,13 +1350,16 @@ std::string convert_msg_name_dl(int msg)
 	case 5:
 		ret = "Paging";
 		break;
+	case 6:
+		ret = "Random Access Response";
+		break;
 	default:
 		ret = "-";
 		break;
 	}
 	return ret;
 }
-void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::string value, int msg)
+void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::string value, int msg, uint32_t ta_rnti)
 {
 	std::stringstream msg_api; // BWS
 
@@ -1354,6 +1376,9 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 	msg_api << std::left << std::setw(11) << rnti;
 	std::string msg_name = convert_msg_name_dl(msg);
 	msg_api << std::left << std::setw(25) << msg_name;
+	if(ta_rnti!=-1){
+		msg_api << std::left << std::setw(2) << "{" << ta_rnti << "}";
+	}
 	msg_api << std::endl;
 
 	if(DEBUG_SEC_PRINT==1){
@@ -1362,4 +1387,4 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 	if(FILE_WRITE==1){
 		(*filewriter_objs)[FILE_IDX_API]->write_stats(msg_api.str());
 	}
-}
+} // DL
