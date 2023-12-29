@@ -11,7 +11,7 @@ void LTESniffer_stat_writer::enable(bool en)
 void LTESniffer_stat_writer::open(const std::string filename)
 {
   fprintf(stdout, "Opening Statistic file\n");
-  FILE* stat_file = fopen(filename.c_str(), "w");
+  stat_file = fopen(filename.c_str(), "w");
   if (stat_file == NULL) {
     printf("Failed to open file \"%s\" for writing\n", filename.c_str());
   }
@@ -20,10 +20,12 @@ void LTESniffer_stat_writer::open(const std::string filename)
 
 void LTESniffer_stat_writer::close()
 {
-  fprintf(stdout, "Closing Statistic file\n");
+  int err = -1;
+  //fprintf(stdout, "Closing Statistic file\n");
   if (stat_file) {
-    fclose(stat_file);
+    err = fclose(stat_file);
   }
+  fprintf(stdout, "Closing Statistic file: success %d \n", err==0);
 }
 
 // public method

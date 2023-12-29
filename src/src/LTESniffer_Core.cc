@@ -457,6 +457,7 @@ bool LTESniffer_Core::run(){
         case DECODE_PDSCH:
           if ((mcs_tracking.get_nof_api_msg()%30) == 0 && api_mode > -1){
             print_api_header();
+            //std::cout << std::hash<std::thread::id>{}(std::this_thread::get_id()) << std::endl;
             mcs_tracking.increase_nof_api_msg();
             if (mcs_tracking.get_nof_api_msg() > 30){
               mcs_tracking.reset_nof_api_msg();
@@ -532,23 +533,23 @@ bool LTESniffer_Core::run(){
         switch (sniffer_mode)
         {
         case DL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_dl();}
+          mcs_tracking.print_database_dl(filewriter_objs, api_mode);
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           mcs_tracking_timer = 0;
           break;
         case UL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_ul();}
+          mcs_tracking.print_database_ul(filewriter_objs, api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           mcs_tracking_timer = 0;
           break;
         case DL_UL_MODE: // BWS
           // Downlink
-          if (api_mode == -1) {mcs_tracking.print_database_dl();}
+          mcs_tracking.print_database_dl(filewriter_objs, api_mode);
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           // Uplink
-          if (api_mode == -1) {mcs_tracking.print_database_ul();}
+          mcs_tracking.print_database_ul(filewriter_objs, api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           break;
         default:
@@ -593,19 +594,19 @@ bool LTESniffer_Core::run(){
     {
     case DL_MODE:
       mcs_tracking.merge_all_database_dl();
-      if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
+      mcs_tracking.print_all_database_dl(filewriter_objs, api_mode); 
       break;
     case UL_MODE:
       mcs_tracking.merge_all_database_ul();
-      if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
+      mcs_tracking.print_all_database_ul(filewriter_objs, api_mode); 
       break;
     case DL_UL_MODE: // BWS
       // Downlink
       mcs_tracking.merge_all_database_dl();
-      if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
+      mcs_tracking.print_all_database_dl(filewriter_objs, api_mode); 
       // Uplink
       mcs_tracking.merge_all_database_ul();
-      if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
+      mcs_tracking.print_all_database_ul(filewriter_objs, api_mode); 
       break;
     default:
       break;
@@ -697,18 +698,31 @@ void LTESniffer_Core::setRNTIThreshold(int val){
 }
 
 void LTESniffer_Core::print_api_header(){
+  std::stringstream msg_api;
+
   for (int i = 0; i < 90; i++){
-      std::cout << "-";
+      msg_api << "-";
   }
-  std::cout << std::endl;
-  std::cout << std::left << std::setw(10) <<  "SF";
-  std::cout << std::left << std::setw(26) <<  "Detected Identity";
-  std::cout << std::left << std::setw(17) <<  "Value";
-  std::cout << std::left << std::setw(11) <<  "RNTI";  
-  std::cout << std::left << std::setw(25) <<  "From Message";
-  std::cout << std::endl;
+  msg_api << std::endl;
+
+  auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second = str_cur_time.substr(11,8);
+	msg_api << "[" << cur_time_second << "]: ";
+
+  msg_api << std::left << std::setw(10) <<  "SF";
+  msg_api << std::left << std::setw(26) <<  "Detected Identity";
+  msg_api << std::left << std::setw(17) <<  "Value";
+  msg_api << std::left << std::setw(11) <<  "RNTI";  
+  msg_api << std::left << std::setw(25) <<  "From Message";
+  msg_api << std::endl;
   for (int i = 0; i < 90; i++){
-      std::cout << "-";
+      msg_api << "-";
   }
-  std::cout << std::endl;
+  msg_api << std::endl;
+
+  if(DEBUG_SEC_PRINT==1){
+		std::cout << msg_api.str();
+	}
 }

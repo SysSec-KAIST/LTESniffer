@@ -46,7 +46,7 @@
 #define DEBUG_DCI_PRINT 1
 #define DEBUG_TABLE_PRINT 1
 #define DEBUG_SEC_PRINT 1
-#define FILE_PRINT 1
+#define FILE_PRINT 0
 
 #define ID_RAN_VAL  0
 #define ID_TMSI     1

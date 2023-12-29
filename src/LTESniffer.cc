@@ -46,11 +46,12 @@ int main(int argc, char** argv) {
   bool success = SnifferCore.run();
 
   // BWS
+  myfile = freopen("/dev/tty","r",stderr);
+  fclose (stderr);
+
   cout << endl;
   cout << "LTESniffer End!" << endl;
   cout << endl;
-  myfile = freopen("/dev/tty","r",stderr);
-  fclose (stderr);
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

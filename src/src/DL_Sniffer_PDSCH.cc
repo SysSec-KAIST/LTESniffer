@@ -1334,12 +1334,24 @@ std::string convert_msg_name_dl(int msg)
 }
 void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::string value, int msg)
 {
-	std::cout << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;
+	std::stringstream msg_api; // BWS
+
+	auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second = str_cur_time.substr(11,8);
+	msg_api << "[" << cur_time_second << "]: ";
+
+	msg_api << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;
 	std::string id_name = convert_id_name_dl(id);
-	std::cout << std::left << std::setw(26) << id_name;
-	std::cout << std::left << std::setw(17) << value;
-	std::cout << std::left << std::setw(11) << rnti;
+	msg_api << std::left << std::setw(26) << id_name;
+	msg_api << std::left << std::setw(17) << value;
+	msg_api << std::left << std::setw(11) << rnti;
 	std::string msg_name = convert_msg_name_dl(msg);
-	std::cout << std::left << std::setw(25) << msg_name;
-	std::cout << std::endl;
+	msg_api << std::left << std::setw(25) << msg_name;
+	msg_api << std::endl;
+
+	if(DEBUG_SEC_PRINT==1){
+		std::cout << msg_api.str();
+	}
 }
