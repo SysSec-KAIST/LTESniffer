@@ -43,7 +43,14 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   harq_mode(args.harq_mode),
   sniffer_mode(args.sniffer_mode),
   ulsche(args.target_rnti, &ul_harq, args.en_debug),
-  api_mode(args.api_mode)
+  api_mode(args.api_mode),
+  apiwriter(),
+  dlwriter(),
+  dldciwriter(),
+  ulwriter(),
+  uldciwriter(),
+  rarwriter(),
+  otherwriter()
 {
   /*create pcap writer and name of output file*/    
   auto now = std::chrono::system_clock::now();
@@ -77,13 +84,13 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   }
   pcapwriter.open(pcap_file_name, pcap_file_name_api, 0);
   // BWS
-  filewriter_objs[FILE_IDX_API].open(("LETTUCE_api_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_DL].open(("LETTUCE_dl_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_DL_DCI].open(("LETTUCE_dl_dci_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_UL].open(("LETTUCE_ul_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_UL_DCI].open(("LETTUCE_ul_dci_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_RAR].open(("LETTUCE_rar_" + str_cur_time + "stat")); // BWS
-  filewriter_objs[FILE_IDX_OTHER].open(("LETTUCE_other_" + str_cur_time + "stat")); // BWS
+  apiwriter.open(("LETTUCE_api_" + str_cur_time + "stat")); // BWS
+  dlwriter.open(("LETTUCE_dl_" + str_cur_time + "stat")); // BWS
+  dldciwriter.open(("LETTUCE_dl_dci_" + str_cur_time + "stat")); // BWS
+  ulwriter.open(("LETTUCE_ul_" + str_cur_time + "stat")); // BWS
+  uldciwriter.open(("LETTUCE_ul_dci_" + str_cur_time + "stat")); // BWS
+  rarwriter.open(("LETTUCE_rar_" + str_cur_time + "stat")); // BWS
+  otherwriter.open(("LETTUCE_other_" + str_cur_time + "stat")); // BWS
 
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
@@ -533,23 +540,23 @@ bool LTESniffer_Core::run(){
         switch (sniffer_mode)
         {
         case DL_MODE:
-          mcs_tracking.print_database_dl(filewriter_objs, api_mode);
+          mcs_tracking.print_database_dl(&dlwriter, api_mode);
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           mcs_tracking_timer = 0;
           break;
         case UL_MODE:
-          mcs_tracking.print_database_ul(filewriter_objs, api_mode);
+          mcs_tracking.print_database_ul(&ulwriter, api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           mcs_tracking_timer = 0;
           break;
         case DL_UL_MODE: // BWS
           // Downlink
-          mcs_tracking.print_database_dl(filewriter_objs, api_mode);
+          mcs_tracking.print_database_dl(&dlwriter, api_mode);
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           // Uplink
-          mcs_tracking.print_database_ul(filewriter_objs, api_mode);
+          mcs_tracking.print_database_ul(&ulwriter, api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           break;
         default:
@@ -594,19 +601,19 @@ bool LTESniffer_Core::run(){
     {
     case DL_MODE:
       mcs_tracking.merge_all_database_dl();
-      mcs_tracking.print_all_database_dl(filewriter_objs, api_mode); 
+      mcs_tracking.print_all_database_dl(&dlwriter, api_mode); 
       break;
     case UL_MODE:
       mcs_tracking.merge_all_database_ul();
-      mcs_tracking.print_all_database_ul(filewriter_objs, api_mode); 
+      mcs_tracking.print_all_database_ul(&ulwriter, api_mode); 
       break;
     case DL_UL_MODE: // BWS
       // Downlink
       mcs_tracking.merge_all_database_dl();
-      mcs_tracking.print_all_database_dl(filewriter_objs, api_mode); 
+      mcs_tracking.print_all_database_dl(&dlwriter, api_mode); 
       // Uplink
       mcs_tracking.merge_all_database_ul();
-      mcs_tracking.print_all_database_ul(filewriter_objs, api_mode); 
+      mcs_tracking.print_all_database_ul(&ulwriter, api_mode); 
       break;
     default:
       break;
@@ -650,13 +657,13 @@ void LTESniffer_Core::handleSignal() {
 LTESniffer_Core::~LTESniffer_Core(){
   pcapwriter.close();
   // BWS
-  filewriter_objs[FILE_IDX_API].close(); // BWS
-  filewriter_objs[FILE_IDX_DL].close(); // BWS
-  filewriter_objs[FILE_IDX_DL_DCI].close(); // BWS
-  filewriter_objs[FILE_IDX_UL].close(); // BWS
-  filewriter_objs[FILE_IDX_UL_DCI].close(); // BWS
-  filewriter_objs[FILE_IDX_RAR].close(); // BWS
-  filewriter_objs[FILE_IDX_OTHER].close(); // BWS
+  apiwriter.close(); // BWS
+  dlwriter.close(); // BWS
+  dldciwriter.close(); // BWS
+  ulwriter.close(); // BWS
+  uldciwriter.close(); // BWS
+  rarwriter.close(); // BWS
+  otherwriter.close(); // BWS
   // delete        harq_map;
   // harq_map    = nullptr;
   // delete        phy;

@@ -112,7 +112,13 @@ private:
   std::mutex              harq_map_mutex;
   Phy                     *phy;
   LTESniffer_pcap_writer  pcapwriter;
-  LTESniffer_stat_writer  filewriter_objs[6]; // BWS
+  LTESniffer_stat_writer  apiwriter;
+  LTESniffer_stat_writer  dlwriter;
+  LTESniffer_stat_writer  dldciwriter;
+  LTESniffer_stat_writer  ulwriter;
+  LTESniffer_stat_writer  uldciwriter;
+  LTESniffer_stat_writer  rarwriter;
+  LTESniffer_stat_writer  otherwriter;
   srsran::mac_pcap        mac_pcap;
   int                     mcs_tracking_mode;
   MCSTracking             mcs_tracking;

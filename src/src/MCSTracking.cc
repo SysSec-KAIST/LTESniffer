@@ -301,7 +301,7 @@ void print_header_ul_mode(std::stringstream &msg)
     msg << std::endl;
 }
 
-void MCSTracking::print_database_ul(LTESniffer_stat_writer  filewriter_objs[6], int api_mode)
+void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
@@ -417,13 +417,13 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  filewriter_objs[6], 
 		std::cout << msg.str();
 	}
     if(FILE_PRINT==1){
-        filewriter_objs[FILE_IDX_UL].write_stats(msg.str());
+        filewriter_obj->write_stats(msg.str());
     }
 
     trackinglock.unlock();
 }
 
-void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  filewriter_objs[6], int api_mode)
+void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
@@ -779,7 +779,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  filewriter_objs[
 		std::cout << msg.str();
 	}
     if(FILE_PRINT==1){
-        filewriter_objs[FILE_IDX_UL].write_stats(msg.str());
+        filewriter_obj->write_stats(msg.str());
     }
 
     trackinglock.unlock();
@@ -1061,7 +1061,7 @@ void print_header(std::stringstream &msg)
     msg << std::endl;
 }
 
-void MCSTracking::print_database_dl(LTESniffer_stat_writer  filewriter_objs[6], int api_mode)
+void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
@@ -1167,13 +1167,13 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  filewriter_objs[6], 
 		std::cout << msg.str();
 	}
     if(FILE_PRINT==1){
-        filewriter_objs[FILE_IDX_DL].write_stats(msg.str());
+        filewriter_obj->write_stats(msg.str());
     }
 
     trackinglock.unlock();
 } // print_database_dl
 
-void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  filewriter_objs[6], int api_mode)
+void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
@@ -1378,7 +1378,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  filewriter_objs[
 		std::cout << msg.str();
 	}
     if(FILE_PRINT==1){
-        filewriter_objs[FILE_IDX_DL].write_stats(msg.str());
+        filewriter_obj->write_stats(msg.str());
     }
 
     trackinglock.unlock();
