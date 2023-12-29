@@ -94,7 +94,6 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   filewriter_objs[FILE_IDX_RAR]->open(("LETTUCE_rar_" + str_cur_time + "stat")); // BWS
   filewriter_objs[FILE_IDX_OTHER]->open(("LETTUCE_other_" + str_cur_time + "stat")); // BWS
 
-
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
   /*Set multi offset in ULSchedule*/
@@ -110,6 +109,7 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
                 args.dci_format_split_ratio,
                 args.rnti_histogram_threshold,
                 &pcapwriter,
+                &filewriter_objs,
                 &mcs_tracking,
                 &harq,
                 args.mcs_tracking_mode,
@@ -466,7 +466,7 @@ bool LTESniffer_Core::run(){
           break;
         case DECODE_PDSCH:
           if ((mcs_tracking.get_nof_api_msg()%30) == 0 && api_mode > -1){
-            print_api_header();
+            print_api_header(filewriter_objs[FILE_IDX_API]);
             //std::cout << std::hash<std::thread::id>{}(std::this_thread::get_id()) << std::endl;
             mcs_tracking.increase_nof_api_msg();
             if (mcs_tracking.get_nof_api_msg() > 30){
@@ -555,7 +555,7 @@ bool LTESniffer_Core::run(){
           break;
         case DL_UL_MODE: // BWS
           // Downlink
-          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], api_mode);
+          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], 1); // BWS force DL to not print in DL/UL mode
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           // Uplink
@@ -613,7 +613,7 @@ bool LTESniffer_Core::run(){
     case DL_UL_MODE: // BWS
       // Downlink
       mcs_tracking.merge_all_database_dl();
-      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); 
+      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); // BWS allow final DL table in DL/UL mode
       // Uplink
       mcs_tracking.merge_all_database_ul();
       mcs_tracking.print_all_database_ul(filewriter_objs[FILE_IDX_UL], api_mode); 
@@ -707,7 +707,7 @@ void LTESniffer_Core::setRNTIThreshold(int val){
   if(phy){phy->getCommon().getRNTIManager().setHistogramThreshold(val);}
 }
 
-void LTESniffer_Core::print_api_header(){
+void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
   std::stringstream msg_api;
 
   for (int i = 0; i < 90; i++){
@@ -734,5 +734,8 @@ void LTESniffer_Core::print_api_header(){
 
   if(DEBUG_SEC_PRINT==1){
 		std::cout << msg_api.str();
+	}
+  if(FILE_WRITE==1){
+		filewriter_obj->write_stats(msg_api.str());
 	}
 }

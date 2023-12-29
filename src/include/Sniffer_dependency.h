@@ -43,10 +43,10 @@
 #define UL_MODE     1
 #define DL_UL_MODE  2
 // BWS
-#define DEBUG_DCI_PRINT 1
-#define DEBUG_TABLE_PRINT 1
-#define DEBUG_SEC_PRINT 1
-#define FILE_PRINT 1
+#define DEBUG_DCI_PRINT 0 // default not print to screen
+#define DEBUG_TABLE_PRINT 1 // default print when no SEC/API
+#define DEBUG_SEC_PRINT 1 // default print if active
+#define FILE_WRITE 1 // write everything to file
 
 #define ID_RAN_VAL  0
 #define ID_TMSI     1

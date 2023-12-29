@@ -16,6 +16,7 @@ PUSCH_Decoder::PUSCH_Decoder(srsran_enb_ul_t &enb_ul,
                              cf_t **buffer_offset,
                              srsran_ul_cfg_t &ul_cfg,
                              LTESniffer_pcap_writer *pcapwriter,
+                             std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                              MCSTracking *mcstracking,
                              bool en_debug) : enb_ul(enb_ul),
                                               ul_sf(ul_sf),
@@ -25,6 +26,7 @@ PUSCH_Decoder::PUSCH_Decoder(srsran_enb_ul_t &enb_ul,
                                               buffer_offset(buffer_offset),
                                               ul_cfg(ul_cfg),
                                               pcapwriter(pcapwriter),
+                                              filewriter_objs(filewriter_objs),
                                               sf_power(),
                                               mcstracking(mcstracking),
                                               en_debug(en_debug)
@@ -794,6 +796,9 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
     if(DEBUG_DCI_PRINT==1){
 		std::cout << msg.str();
 	}
+    if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_UL_DCI]->write_stats(msg.str());
+	}
 }
 
 std::string PUSCH_Decoder::dci_format_ul(int format)
@@ -951,6 +956,9 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
     msg_api << std::endl;
     if(DEBUG_SEC_PRINT==1){
 		std::cout << msg_api.str();
+	}
+    if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_API]->write_stats(msg_api.str());
 	}
 }
 

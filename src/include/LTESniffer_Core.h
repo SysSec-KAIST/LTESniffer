@@ -96,7 +96,7 @@ public:
   void resetDCIConsumer();
   void refreshShortcutDiscovery(bool val);
   void setRNTIThreshold(int val);
-  void print_api_header();
+  void print_api_header(LTESniffer_stat_writer  *filewriter_obj);
   bool run();
   void stop();
 private:

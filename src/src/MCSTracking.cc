@@ -416,7 +416,7 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
-    if(FILE_PRINT==1){
+    if(FILE_WRITE==1){
         filewriter_obj->write_stats(msg.str());
     }
 
@@ -778,7 +778,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
-    if(FILE_PRINT==1){
+    if(FILE_WRITE==1){
         filewriter_obj->write_stats(msg.str());
     }
 
@@ -1166,7 +1166,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
-    if(FILE_PRINT==1){
+    if(FILE_WRITE==1){
         filewriter_obj->write_stats(msg.str());
     }
 
@@ -1377,7 +1377,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
-    if(FILE_PRINT==1){
+    if(FILE_WRITE==1){
         filewriter_obj->write_stats(msg.str());
     }
 

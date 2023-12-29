@@ -13,6 +13,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                PhyCommon &common,
                                DCIMetaFormats &metaFormats,
                                LTESniffer_pcap_writer *pcapwriter,
+                               std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                                MCSTracking *mcs_tracking,
                                HARQ *harq,
                                int mcs_tracking_mode,
@@ -28,6 +29,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                                    updateMetaFormats(false),
                                                    stats(),
                                                    pcapwriter(pcapwriter),
+                                                   filewriter_objs(filewriter_objs),
                                                    mcs_tracking(mcs_tracking),
                                                    harq(harq),
                                                    harq_mode(harq_mode),
@@ -51,7 +53,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     /* Config for Downlink Sniffing function*/
     srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, common.nof_rx_antennas);
     /* PDSCH decoder (Downlink)*/
-    pdschdecoder = new PDSCH_Decoder(idx, pcapwriter, mcs_tracking, common.getRNTIManager(), harq, mcs_tracking_mode, harq_mode, common.nof_rx_antennas);
+    pdschdecoder = new PDSCH_Decoder(idx, pcapwriter, filewriter_objs, mcs_tracking, common.getRNTIManager(), harq, mcs_tracking_mode, harq_mode, common.nof_rx_antennas);
     break;
   case UL_MODE:
     /* Config for Downlink Sniffing function*/
@@ -59,6 +61,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     /* PDSCH decoder (Downlink)*/
     pdschdecoder = new PDSCH_Decoder(idx,
                                      pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      common.getRNTIManager(),
                                      harq,
@@ -73,6 +76,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                      sfb.sf_buffer_offset,
                                      ul_cfg,
                                      pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      mcs_tracking->get_debug_mode());
     /*Uplink enb init*/
@@ -89,6 +93,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     /* PDSCH decoder (Downlink)*/
     pdschdecoder = new PDSCH_Decoder(idx,
                                      pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      common.getRNTIManager(),
                                      harq,
@@ -103,6 +108,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                      sfb.sf_buffer_offset,
                                      ul_cfg,
                                      pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      mcs_tracking->get_debug_mode());
     /*Uplink enb init*/

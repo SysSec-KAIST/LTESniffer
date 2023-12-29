@@ -5,6 +5,7 @@ float p_a_array[8]{-6, -4.77, -3, -1.77, 0, 1, 2, 3};
 
 PDSCH_Decoder::PDSCH_Decoder(uint32_t idx,
 							 LTESniffer_pcap_writer *pcapwriter,
+							 std::vector<LTESniffer_stat_writer *> *filewriter_objs,
 							 MCSTracking *mcs_tracking,
 							 RNTIManager &rntiManager,
 							 HARQ *harq,
@@ -21,6 +22,7 @@ PDSCH_Decoder::PDSCH_Decoder(uint32_t idx,
 												pdsch_res(),
 												pdsch_cfg(),
 												pcapwriter(pcapwriter),
+												filewriter_objs(filewriter_objs),
 												mcs_tracking(mcs_tracking),
 												rntiManager(rntiManager),
 												harq(harq),
@@ -1190,7 +1192,10 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 	if(DEBUG_DCI_PRINT==1){
 		std::cout << msg.str();
 	}
-}
+	if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_DL_DCI]->write_stats(msg.str());
+	}
+} // DL
 
 std::string PDSCH_Decoder::dci_format(int format)
 {
@@ -1353,5 +1358,8 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 
 	if(DEBUG_SEC_PRINT==1){
 		std::cout << msg_api.str();
+	}
+	if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_API]->write_stats(msg_api.str());
 	}
 }

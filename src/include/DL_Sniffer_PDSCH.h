@@ -65,6 +65,7 @@ class PDSCH_Decoder
 public:
     PDSCH_Decoder(uint32_t idx, 
                   LTESniffer_pcap_writer *pcapwriter, 
+                  std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                   MCSTracking *mcs_tracking,
                   RNTIManager& rntiManager,
                   HARQ *harq,
@@ -174,6 +175,7 @@ private:
     srsran_pdsch_res_t              *pdsch_res;
     srsran_pdsch_cfg_t              *pdsch_cfg; //buffer
     LTESniffer_pcap_writer          *pcapwriter;
+    std::vector<LTESniffer_stat_writer *> *filewriter_objs;
     RNTIManager                     &rntiManager;
     int                             mcs_tracking_mode;
     MCSTracking                     *mcs_tracking;

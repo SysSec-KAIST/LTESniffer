@@ -51,6 +51,7 @@ public:
                   cf_t** buffer_offset,
                   srsran_ul_cfg_t    &ul_cfg,
                   LTESniffer_pcap_writer *pcapwriter,
+                  std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                   MCSTracking *mcstracking,
                   bool en_debug);
     ~PUSCH_Decoder();
@@ -115,6 +116,7 @@ private:
     srsran_enb_ul_t         &enb_ul;
     srsran_ul_sf_cfg_t      &ul_sf;
     LTESniffer_pcap_writer  *pcapwriter;
+    std::vector<LTESniffer_stat_writer *> *filewriter_objs;
     srsran_pusch_res_t      pusch_res           = {};
     srsran_ul_cfg_t         &ul_cfg;
 
