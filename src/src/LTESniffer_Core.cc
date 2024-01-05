@@ -99,9 +99,9 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   errfile = freopen(error_filename.c_str(),"w",stderr);
 
   filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_OTHER]->open((stat_folder + "LETTUCE_other_" + str_cur_time + "ansi")); // BWS
