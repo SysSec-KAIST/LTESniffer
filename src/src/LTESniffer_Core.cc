@@ -531,6 +531,7 @@ bool LTESniffer_Core::run(){
         skip_last_1s = 0;
       }
       if (update_rnti_timer == mcs_tracking.get_interval()){
+        //std::cout << "update tables" << std::endl;
         switch (sniffer_mode)
         {
         case DL_MODE:
@@ -552,6 +553,7 @@ bool LTESniffer_Core::run(){
       }
       /* Update 256tracking and harq database, delete the inactive RNTIs*/
       if (mcs_tracking_timer == 10){
+        //std::cout << "print tables" << std::endl;
         switch (sniffer_mode)
         {
         case DL_MODE:
@@ -573,12 +575,14 @@ bool LTESniffer_Core::run(){
           // Uplink
           mcs_tracking.print_database_ul(filewriter_objs[FILE_IDX_UL], api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
+          mcs_tracking_timer = 0;
           break;
         default:
           break;
         }
       }
     } else if(ret == 0){ //get buffer wrong or out of sync
+      //std::cout << "issues" << std::endl;
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
         state = DECODE_MIB;

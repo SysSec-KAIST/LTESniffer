@@ -340,8 +340,10 @@ int PDSCH_Decoder::decode_ul_mode(uint32_t rnti, std::vector<DL_Sniffer_rar_resu
 				float ta_max = (float) (result.ta + 1) * 78.12; // meters multiply by 78 meters for shortcut
 				// {min}-{max} meters ... TA_RNTI does not change per user, does per carrier?
 				std:string ta_str = std::to_string((int) ta_min) + " to " + std::to_string((int) ta_max) + " m";
-				print_api_dl(dl_sf->tti, result.t_crnti, MSG_RAR, ta_str, MSG_RAR, cur_rnti);
-				//print_api_dl(dl_sf->tti, cur_rnti, MSG_RAR, ta_str, MSG_RAR);
+				if(api_mode == 0 || api_mode == 3){
+					print_api_dl(dl_sf->tti, result.t_crnti, MSG_RAR, ta_str, MSG_RAR, cur_rnti);
+					//print_api_dl(dl_sf->tti, cur_rnti, MSG_RAR, ta_str, MSG_RAR);
+				}
 				rar_result->push_back(std::move(result));
 			}
 			else
