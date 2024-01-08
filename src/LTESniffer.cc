@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
   cout << endl;
-  cout << "LTESniffer Start!" << endl;
+  cout << "LTESniffer Start!!!" << endl;
   cout << endl;
 
   // BWS
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   bool success = SnifferCore.run();
 
   cout << endl;
-  cout << "LTESniffer End!" << endl;
+  cout << "LTESniffer End!!!" << endl;
   cout << endl;
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
