@@ -254,7 +254,6 @@ int rf_search_and_decode_mib(srsran_rf_t*       rf,
 {
   int ret = SRSRAN_ERROR;
 
-  printf("Searching for cell...\n");
   ret = rf_cell_search(rf, nof_rx_channels, config, force_N_id_2, cell, cfo);
   if (ret > 0) {
     printf("Decoding PBCH for cell %d (N_id_2=%d)\n", cell->id, cell->id % 3);
