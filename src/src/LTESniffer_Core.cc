@@ -99,7 +99,9 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   errfile = freopen(error_filename.c_str(),"w",stderr);
 
   std::string out_filename = stat_folder + "LETTUCE_stdout_" + str_cur_time + "ansi";
-  outfile = freopen(out_filename.c_str(),"a+",stdout);
+  // BWS this will do the same format on command line with tee 
+  //    date +"LETTUCE_stdout_%a_%b__%-d_%H.%M.%S_%Y.ansi"
+  //outfile = freopen(out_filename.c_str(),"w",stdout);
 
   filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); // BWS
@@ -681,8 +683,8 @@ LTESniffer_Core::~LTESniffer_Core(){
   // BWS
   errfile = freopen("/dev/tty","r",stderr);
   fclose (stderr);
-  outfile = freopen("/dev/tty","r",stdout);
-  fclose (stdout);
+  //outfile = freopen("/dev/tty","r",stdout);
+  //fclose (stdout);
   // BWS
   filewriter_objs[FILE_IDX_API]->close(); // BWS
   filewriter_objs[FILE_IDX_DL]->close(); // BWS
