@@ -95,16 +95,19 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
       mkdir(stat_folder.c_str(), 0700);
   }
 
-  std::string error_filename = stat_folder + "LETTUCE_error_" + str_cur_time + "ansi";
+  std::string error_filename = stat_folder + "LETTUCE_stderr_" + str_cur_time + "ansi";
   errfile = freopen(error_filename.c_str(),"w",stderr);
+
+  std::string out_filename = stat_folder + "LETTUCE_stdout_" + str_cur_time + "ansi";
+  outfile = freopen(out_filename.c_str(),"a+",stdout);
 
   filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); // BWS
   filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_OTHER]->open((stat_folder + "LETTUCE_other_" + str_cur_time + "ansi")); // BWS
+  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); // BWS
+  // filewriter_objs[FILE_IDX_OTHER]->open((stat_folder + "LETTUCE_other_" + str_cur_time + "ansi")); // BWS
 
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
@@ -678,6 +681,8 @@ LTESniffer_Core::~LTESniffer_Core(){
   // BWS
   errfile = freopen("/dev/tty","r",stderr);
   fclose (stderr);
+  outfile = freopen("/dev/tty","r",stdout);
+  fclose (stdout);
   // BWS
   filewriter_objs[FILE_IDX_API]->close(); // BWS
   filewriter_objs[FILE_IDX_DL]->close(); // BWS

@@ -113,6 +113,7 @@ private:
   Phy                     *phy;
   LTESniffer_pcap_writer  pcapwriter;
   FILE * errfile;
+  FILE * outfile;
   std::vector<LTESniffer_stat_writer *> filewriter_objs;
   LTESniffer_stat_writer  apiwriter;
   LTESniffer_stat_writer  dlwriter;
