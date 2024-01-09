@@ -586,8 +586,13 @@ bool LTESniffer_Core::run(){
         auto now = std::chrono::system_clock::now();
         std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
         std::string str_cur_time(std::ctime(&cur_time));
-        std::string cur_time_second = str_cur_time.substr(11,8);
-        
+        std::string cur_time_second;
+        if(str_cur_time.length()>=(11+8)){
+            cur_time_second = str_cur_time.substr(11,8);
+        }else{
+            cur_time_second = "";
+        }
+
         control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
         write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
         control_msg.str(std::string());
@@ -816,7 +821,12 @@ void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
   auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+      cur_time_second = str_cur_time.substr(11,8);
+  }else{
+      cur_time_second = "";
+  }
 	msg_api << "[" << cur_time_second << "]: ";
 
   msg_api << std::left << std::setw(10) <<  "SF";

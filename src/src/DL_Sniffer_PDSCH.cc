@@ -1178,7 +1178,12 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 	auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
 
 	msg << std::left << std::setw(15) << name;
@@ -1368,7 +1373,12 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 	auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg_api << "[" << cur_time_second << "]: ";
 
 	msg_api << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;

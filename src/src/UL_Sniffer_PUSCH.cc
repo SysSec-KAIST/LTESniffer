@@ -426,7 +426,18 @@ void PUSCH_Decoder::decode()
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                 ul_cfg.pusch.enable_64qam = false; // check here for 64/16QAM
                 ul_cfg.pusch.meas_ta_en = true;    // enable ta measurement
-                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant; //bws
+                // BWS start
+                bool set_grant = false; 
+                if(decoding_mem.ran_ul_grant!=nullptr){if(decoding_mem.ran_ul_grant->tb.tbs != 0){
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant; //bws        
+                    set_grant = true;
+                }}
+                if(set_grant==false){if(decoding_mem.ran_ul_grant_256!=nullptr){if(decoding_mem.ran_ul_grant_256->tb.tbs != 0){
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256; //bws     
+                    set_grant = true;   
+                }}} 
+                if(set_grant==false){continue;}
+                // BWS end
                 int mcs_idx = ul_cfg.pusch.grant.tb.mcs_idx;
                 pusch_res.crc = false;
                 /*Get Number of ack which was calculated in Subframe worker last 4 ms*/
@@ -477,6 +488,8 @@ void PUSCH_Decoder::decode()
                         decoding_mem.mcs_mod = UL_SNIFFER_256QAM_MAX;
                         ul_cfg.pusch.enable_64qam = true;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
+                        if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
+                        if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
                         ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                         {
@@ -507,15 +520,18 @@ void PUSCH_Decoder::decode()
                                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                                 ul_cfg.pusch.enable_64qam = true; // 64QAM
                                 ul_cfg.pusch.meas_ta_en = true;   // enable ta measurement
-                                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
-
-                                decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
-
+                                if(decoding_mem.ran_ul_grant!=nullptr){if(decoding_mem.ran_ul_grant->tb.tbs != 0){
+                                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
+                                    decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
+                                }}
+                                    
                                 if (pusch_res.crc == false)
                                 { // try 256QAM table if 2 cases above failed
                                     ul_cfg.pusch.rnti = decoding_mem.rnti;
                                     ul_cfg.pusch.enable_64qam = true;
                                     ul_cfg.pusch.meas_ta_en = true; // enable ta measurement
+                                    if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
+                                    if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
                                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                                     modulation_mode = modulation_mode_string_256(mcs_idx);
                                     if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -546,6 +562,8 @@ void PUSCH_Decoder::decode()
                         break;
                     case UL_SNIFFER_256QAM_MAX:
                         ul_cfg.pusch.enable_64qam = true;
+                        if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
+                        if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
                         ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -559,6 +577,8 @@ void PUSCH_Decoder::decode()
                         decode_run("[PUSCH-16 ]", decoding_mem, modulation_mode, 0);
                         if (pusch_res.crc == false)
                         { // try 256QAM table if case above failed
+                            if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
+                            if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
                             ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                             modulation_mode = modulation_mode_string_256(mcs_idx);
                             if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -729,7 +749,12 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
     auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
 
     msg << std::left << std::setw(12) << offset_name << " SF: ";
@@ -950,7 +975,12 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
 	auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+    std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg_api << "[" << cur_time_second << "]: ";
 
     msg_api << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;
@@ -972,14 +1002,14 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
-    if(decoding_mem.ran_ul_grant==nullptr) //bws
-    {
-        return SRSRAN_ERROR;
-    }
-    if(decoding_mem.ran_ul_grant_256==nullptr) //bws
-    {
-        return SRSRAN_ERROR;
-    }
+    // if(decoding_mem.ran_ul_grant==nullptr) //bws
+    // {
+    //     return SRSRAN_ERROR;
+    // }
+    // if(decoding_mem.ran_ul_grant_256==nullptr) //bws
+    // {
+    //     return SRSRAN_ERROR;
+    // }
     if (decoding_mem.is_rar_gant)
     {
         return SRSRAN_SUCCESS;
@@ -990,10 +1020,10 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
         ret = SRSRAN_ERROR;
     }
     /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
-    if (decoding_mem.ran_ul_grant->tb.tbs == 0 || decoding_mem.ran_ul_grant_256->tb.tbs == 0)
-    {
-        ret = SRSRAN_ERROR;
-    }
+    // if (decoding_mem.ran_ul_grant->tb.tbs == 0 || decoding_mem.ran_ul_grant_256->tb.tbs == 0)
+    // {
+    //     ret = SRSRAN_ERROR;
+    // }
     /*if number of PRB is invalid*/
     if (!check_valid_prb_ul(decoding_mem.ran_ul_grant->L_prb))
     {

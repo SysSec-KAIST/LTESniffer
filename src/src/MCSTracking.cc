@@ -288,7 +288,12 @@ void print_header_ul_mode(std::stringstream &msg)
     auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
     
     msg << std::left << std::setw(5) << "Num";
@@ -446,7 +451,12 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
 
     msg << std::left << std::setw(5) << "Num";
@@ -1052,7 +1062,12 @@ void print_header(std::stringstream &msg)
     auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
 
     msg << std::left << std::setw(5) << "Num";
@@ -1203,7 +1218,12 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second = str_cur_time.substr(11,8);
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
 	msg << "[" << cur_time_second << "]: ";
 
     msg << std::left << std::setw(5) << "Num";
