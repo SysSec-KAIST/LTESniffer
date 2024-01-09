@@ -976,6 +976,10 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
     {
         return SRSRAN_ERROR;
     }
+    if(decoding_mem.ran_ul_grant_256==nullptr) //bws
+    {
+        return SRSRAN_ERROR;
+    }
     if (decoding_mem.is_rar_gant)
     {
         return SRSRAN_SUCCESS;
