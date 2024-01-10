@@ -31,7 +31,6 @@
 
 #include "Histogram.h"
 #include "Interval.h"
-#include <mutex>
 
 // DCI minimum average llr for accepting DCI for blind decoding
 //#define DCI_MINIMUM_AVG_LLR_BOUND 0.5     //0.5
@@ -117,6 +116,4 @@ private:
   uint32_t threshold;
   uint32_t maxCandidatesPerStepPerFormat;
   std::vector<int32_t> remainingCandidates;
-
-  std::mutex  rnti_manager_mutex;
 };
