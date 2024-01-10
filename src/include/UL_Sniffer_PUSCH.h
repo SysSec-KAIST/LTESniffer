@@ -70,6 +70,7 @@ public:
     /*Investigate UL grant before decoding it*/
     int  check_valid_prb_ul(uint32_t nof_prb);
     int  investigate_valid_ul_grant(DCI_UL &decoding_mem);
+    int  investigate_valid_ul_grant_256(DCI_UL &decoding_mem);
 
     void decode_run(std::string info, DCI_UL &decoding_mem, std::string mod, float falcon_signal_power);
 
@@ -112,6 +113,7 @@ private:
     std::vector<DCI_UL>     *dci_ul;
     std::vector<DCI_UL>     *rar_dci_ul;
     int                     valid_ul_grant      = SRSRAN_ERROR;
+    int                     valid_ul_grant_256      = SRSRAN_ERROR;
 
     srsran_enb_ul_t         &enb_ul;
     srsran_ul_sf_cfg_t      &ul_sf;

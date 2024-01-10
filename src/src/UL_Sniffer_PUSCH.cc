@@ -419,24 +419,26 @@ void PUSCH_Decoder::decode()
         {
             /*Investigate current decoding member to know it has a valid UL grant or not*/
             valid_ul_grant = investigate_valid_ul_grant(decoding_mem);
+            valid_ul_grant_256 = investigate_valid_ul_grant_256(decoding_mem);
+            int some_valid_grant = (valid_ul_grant == SRSRAN_SUCCESS) || (valid_ul_grant_256 == SRSRAN_SUCCESS);
             /*Only decode member with valid UL grant*/
-            if (((decoding_mem.rnti == target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS)) && decoding_mem.rnti != 0)
+            if (((decoding_mem.rnti == target_rnti) || (some_valid_grant == 1)) && decoding_mem.rnti != 0)
             {
                 /*Setup uplink config for decoding*/
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                 ul_cfg.pusch.enable_64qam = false; // check here for 64/16QAM
                 ul_cfg.pusch.meas_ta_en = true;    // enable ta measurement
                 // BWS start
-                bool set_grant = false; 
-                if(decoding_mem.ran_ul_grant!=nullptr){if(decoding_mem.ran_ul_grant->tb.tbs != 0){
+                bool set_grant = false;  
+                if(valid_ul_grant == SRSRAN_SUCCESS){
                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant; //bws        
                     set_grant = true;
-                }}
-                if(set_grant==false){if(decoding_mem.ran_ul_grant_256!=nullptr){if(decoding_mem.ran_ul_grant_256->tb.tbs != 0){
+                }
+                if((set_grant == false) && (valid_ul_grant_256 == SRSRAN_SUCCESS)){
                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256; //bws     
                     set_grant = true;   
-                }}} 
-                if(set_grant==false){continue;}
+                } 
+                if(set_grant == false){continue;}
                 // BWS end
                 int mcs_idx = ul_cfg.pusch.grant.tb.mcs_idx;
                 pusch_res.crc = false;
@@ -488,8 +490,7 @@ void PUSCH_Decoder::decode()
                         decoding_mem.mcs_mod = UL_SNIFFER_256QAM_MAX;
                         ul_cfg.pusch.enable_64qam = true;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
-                        if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
-                        if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
+                        if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                         ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                         {
@@ -520,18 +521,17 @@ void PUSCH_Decoder::decode()
                                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                                 ul_cfg.pusch.enable_64qam = true; // 64QAM
                                 ul_cfg.pusch.meas_ta_en = true;   // enable ta measurement
-                                if(decoding_mem.ran_ul_grant!=nullptr){if(decoding_mem.ran_ul_grant->tb.tbs != 0){
+                                if(valid_ul_grant == SRSRAN_SUCCESS){
                                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
                                     decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
-                                }}
+                                }
                                     
                                 if (pusch_res.crc == false)
                                 { // try 256QAM table if 2 cases above failed
                                     ul_cfg.pusch.rnti = decoding_mem.rnti;
                                     ul_cfg.pusch.enable_64qam = true;
                                     ul_cfg.pusch.meas_ta_en = true; // enable ta measurement
-                                    if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
-                                    if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
+                                    if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                                     modulation_mode = modulation_mode_string_256(mcs_idx);
                                     if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -562,8 +562,7 @@ void PUSCH_Decoder::decode()
                         break;
                     case UL_SNIFFER_256QAM_MAX:
                         ul_cfg.pusch.enable_64qam = true;
-                        if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
-                        if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
+                        if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                         ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -577,8 +576,7 @@ void PUSCH_Decoder::decode()
                         decode_run("[PUSCH-16 ]", decoding_mem, modulation_mode, 0);
                         if (pusch_res.crc == false)
                         { // try 256QAM table if case above failed
-                            if(decoding_mem.ran_ul_grant_256==nullptr){continue;}
-                            if(decoding_mem.ran_ul_grant_256->tb.tbs == 0){continue;}
+                            if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                             ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                             modulation_mode = modulation_mode_string_256(mcs_idx);
                             if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -1002,14 +1000,6 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
-    // if(decoding_mem.ran_ul_grant==nullptr) //bws
-    // {
-    //     return SRSRAN_ERROR;
-    // }
-    // if(decoding_mem.ran_ul_grant_256==nullptr) //bws
-    // {
-    //     return SRSRAN_ERROR;
-    // }
     if (decoding_mem.is_rar_gant)
     {
         return SRSRAN_SUCCESS;
@@ -1017,17 +1007,51 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
     /*if RNTI == 0*/
     if (decoding_mem.rnti == 0)
     {
-        ret = SRSRAN_ERROR;
+        return SRSRAN_ERROR;
+    }
+    if(decoding_mem.ran_ul_grant==nullptr) //bws
+    {
+        return SRSRAN_ERROR;
     }
     /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
-    // if (decoding_mem.ran_ul_grant->tb.tbs == 0 || decoding_mem.ran_ul_grant_256->tb.tbs == 0)
-    // {
-    //     ret = SRSRAN_ERROR;
-    // }
+    if (decoding_mem.ran_ul_grant->tb.tbs == 0)
+    {
+        return SRSRAN_ERROR;
+    }
     /*if number of PRB is invalid*/
     if (!check_valid_prb_ul(decoding_mem.ran_ul_grant->L_prb))
     {
-        ret = SRSRAN_ERROR;
+        return SRSRAN_ERROR;
+    }
+
+    return ret;
+}
+
+int PUSCH_Decoder::investigate_valid_ul_grant_256(DCI_UL &decoding_mem)
+{
+    int ret = SRSRAN_SUCCESS;
+    if (decoding_mem.is_rar_gant)
+    {
+        return SRSRAN_SUCCESS;
+    }
+    /*if RNTI == 0*/
+    if (decoding_mem.rnti == 0)
+    {
+        return SRSRAN_ERROR;
+    }
+    if(decoding_mem.ran_ul_grant_256==nullptr) //bws
+    {
+        return SRSRAN_ERROR;
+    }
+    /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
+    if (decoding_mem.ran_ul_grant_256->tb.tbs == 0)
+    {
+        return SRSRAN_ERROR;
+    }
+    /*if number of PRB is invalid*/
+    if (!check_valid_prb_ul(decoding_mem.ran_ul_grant_256->L_prb))
+    {
+        return SRSRAN_ERROR;
     }
 
     return ret;
