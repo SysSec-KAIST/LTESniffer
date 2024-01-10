@@ -32,7 +32,7 @@ MCSTracking::~MCSTracking()
 ul_sniffer_mod_tracking_t MCSTracking::find_tracking_info_RNTI_ul(uint16_t RNTI)
 {
 
-    std::unique_lock<std::mutex> trackinglock(tracking_mutex);
+    std::lock_guard<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
     iter = tracking_database_ul_mode.find(RNTI);
     if ((nof_RNTI_member_ul() == 0) || (iter == tracking_database_ul_mode.end()))
@@ -53,7 +53,7 @@ ul_sniffer_mod_tracking_t MCSTracking::find_tracking_info_RNTI_ul(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_mod;
     }
-    trackinglock.unlock();
+    //trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_ul(uint16_t RNTI, ul_sniffer_mod_tracking_t mcs_mod)
@@ -835,7 +835,7 @@ void MCSTracking::update_statistic_ul(uint16_t RNTI,
 dl_sniffer_mcs_table_t MCSTracking::find_tracking_info_RNTI_dl(uint16_t RNTI)
 {
 
-    std::unique_lock<std::mutex> trackinglock(tracking_mutex);
+    std::lock_guard<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
     iter = tracking_database_dl_mode.find(RNTI);
     if ((nof_RNTI_member_dl() == 0) || (iter == tracking_database_dl_mode.end()))
@@ -856,7 +856,7 @@ dl_sniffer_mcs_table_t MCSTracking::find_tracking_info_RNTI_dl(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_table;
     }
-    trackinglock.unlock();
+    //trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_dl(uint16_t RNTI, dl_sniffer_mcs_table_t mcs_table)
