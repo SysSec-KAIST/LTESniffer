@@ -215,7 +215,7 @@ uint32_t RNTIManager::getAssociatedFormatIdx(uint16_t rnti) {
 }
 
 ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
-  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
+  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); ++it) {
     if(it->rnti == rnti) return it->reason;
   }
   return RM_ACT_UNSET;
@@ -225,7 +225,7 @@ vector<rnti_manager_active_set_t> RNTIManager::getActiveSet() {
   cleanExpired();
   vector<rnti_manager_active_set_t> result(activeSet.size());
   uint32_t index = 0;
-  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
+  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); ++it) {
     result[index].rnti = it->rnti;
     result[index].reason = it->reason;
     result[index].last_seen = timestamp - lastSeen[it->rnti];

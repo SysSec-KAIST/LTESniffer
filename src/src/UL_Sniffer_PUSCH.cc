@@ -817,6 +817,7 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
     if (decoding_mem.is_rar_gant)
     {
         msg << " -- RAR";
+        //std::cout << "RAR RAR RAR RAR RAR RAR" << std::endl;
     }
     if (decoding_mem.is_retx == 1)
     {
@@ -1000,10 +1001,6 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
-    if (decoding_mem.is_rar_gant)
-    {
-        return SRSRAN_SUCCESS;
-    }
     /*if RNTI == 0*/
     if (decoding_mem.rnti == 0)
     {
@@ -1012,6 +1009,10 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
     if(decoding_mem.ran_ul_grant==nullptr) //bws
     {
         return SRSRAN_ERROR;
+    }
+    if (decoding_mem.is_rar_gant)
+    {
+        return SRSRAN_SUCCESS;
     }
     /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
     if (decoding_mem.ran_ul_grant->tb.tbs == 0)
@@ -1030,10 +1031,6 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 int PUSCH_Decoder::investigate_valid_ul_grant_256(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
-    if (decoding_mem.is_rar_gant)
-    {
-        return SRSRAN_SUCCESS;
-    }
     /*if RNTI == 0*/
     if (decoding_mem.rnti == 0)
     {
@@ -1042,6 +1039,10 @@ int PUSCH_Decoder::investigate_valid_ul_grant_256(DCI_UL &decoding_mem)
     if(decoding_mem.ran_ul_grant_256==nullptr) //bws
     {
         return SRSRAN_ERROR;
+    }
+    if (decoding_mem.is_rar_gant)
+    {
+        return SRSRAN_SUCCESS;
     }
     /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
     if (decoding_mem.ran_ul_grant_256->tb.tbs == 0)
