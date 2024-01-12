@@ -215,8 +215,15 @@ uint32_t RNTIManager::getAssociatedFormatIdx(uint16_t rnti) {
 }
 
 ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
-  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); ++it) {
-    if(it->rnti == rnti) return it->reason;
+  std::lock_guard<std::mutex> lock(rnti_mutex);
+  //for(map<u_int16_t,RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
+    //if(it->second.rnti == rnti) return it->second.reason;
+  //} // !!!
+  std::map<uint16_t,RNTIActiveSetItem>::const_iterator pos = activeSet.find(rnti);
+  if (pos == activeSet.end()) {
+      //handle the error
+  } else {
+      return pos->second.reason;
   }
   return RM_ACT_UNSET;
 }
@@ -225,11 +232,11 @@ vector<rnti_manager_active_set_t> RNTIManager::getActiveSet() {
   cleanExpired();
   vector<rnti_manager_active_set_t> result(activeSet.size());
   uint32_t index = 0;
-  for(list<RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); ++it) {
-    result[index].rnti = it->rnti;
-    result[index].reason = it->reason;
-    result[index].last_seen = timestamp - lastSeen[it->rnti];
-    result[index].assoc_format_idx = getAssociatedFormatIdx(it->rnti);
+  for(map<u_int16_t,RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
+    result[index].rnti = it->second.rnti;
+    result[index].reason = it->second.reason;
+    result[index].last_seen = timestamp - lastSeen[it->second.rnti];
+    result[index].assoc_format_idx = getAssociatedFormatIdx(it->second.rnti);
     result[index].frequency = getFrequency(result[index].rnti, result[index].assoc_format_idx);
     if(result[index].assoc_format_idx != 0) {
       result[index].frequency += getFrequency(result[index].rnti, 0);
@@ -377,7 +384,9 @@ uint32_t RNTIManager::getLikelyDlFormatIdx(uint16_t rnti) {
 void RNTIManager::activateRNTI(uint16_t rnti, ActivationReason reason) {
   if(!active[rnti]) {
     active[rnti] = true;
-    activeSet.push_back(RNTIActiveSetItem(rnti, reason));
+    std::unique_lock<std::mutex> lock(rnti_mutex);
+    activeSet.insert({rnti,RNTIActiveSetItem(rnti, reason)});
+    lock.unlock();
   }
 }
 
@@ -385,7 +394,9 @@ void RNTIManager::deactivateRNTI(uint16_t rnti) {
   if(active[rnti]) {
     active[rnti] = false;
     assocFormatIdx[rnti] = 0;
-    activeSet.remove(RNTIActiveSetItem(rnti));
+    std::unique_lock<std::mutex> lock(rnti_mutex);
+    activeSet.erase(rnti);
+    lock.unlock();
   }
 }
 
@@ -400,13 +411,15 @@ bool RNTIManager::isExpired(uint16_t rnti) const {
 }
 
 void RNTIManager::cleanExpired() {
-  list<RNTIActiveSetItem>::iterator it = activeSet.begin();
+  map<u_int16_t,RNTIActiveSetItem>::iterator it = activeSet.begin();
   while(it != activeSet.end()) {
-    if(isExpired(it->rnti)) {
+    if(isExpired(it->second.rnti)) {
+      std::unique_lock<std::mutex> lock(rnti_mutex);
       it = activeSet.erase(it);
+      lock.unlock();
     }
     else {
-      ++it;
+      it++;
     }
   }
 }
