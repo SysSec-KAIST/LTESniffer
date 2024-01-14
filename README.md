@@ -69,6 +69,7 @@ example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 1 -n 5000
 ```
 
 **Important information printed on terminal**
+
 After executing the command, essential information about the recording cell will be displayed on the terminal. Please save this information as it is necessary for correctly running offline decoding later.
 
 ```bash
