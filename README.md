@@ -21,8 +21,10 @@ The main purpose of LTESniffer is to support security and analysis research on t
 
 ## Features
 ### New Update
+- Supports recording IQ raw data of subframes to file. Please refer to `LTESniffer-record-subframe` branch and its [README][capture-readme] for more details.
+- Supports offline decoding using recorded files ([README][capture-readme]).
+- Enable API in the downlink mode (only apply for identity collecting and mapping API)
 - Supports two USRP B-series for uplink sniffing mode. Please refer to `LTESniffer-multi-usrp` branch and its [README][multi-readme] for more details.
-- Improved the DCI 0 detected in uplink.
 - Fixed some bugs.
 
 LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][srsran] library. LTESniffer supports:
@@ -229,7 +231,9 @@ We sincerely appreciate the [FALCON][falcon] and [SRS team][srsran] for making t
 
 ## Contributor
 Special thanks to all the contributors who helped us to fix bugs and improve LTESniffer
-[@cellular777][cellular77]
+
+1. [@cellular777][cellular77]
+2. [Cemaxecuter][Cemaxecuter]
 
 ## BibTex
 Please refer to our [paper][paper] for more details.
@@ -271,4 +275,6 @@ To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards
 [app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
 [watching]: https://syssec.kaist.ac.kr/pub/2022/sec22summer_bae.pdf
 [multi-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-multi-usrp
+[capture-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-record-subframe
 [cellular77]: https://github.com/cellular777
+[Cemaxecuter]: https://www.youtube.com/@cemaxecuter7783
