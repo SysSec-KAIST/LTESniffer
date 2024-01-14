@@ -103,10 +103,10 @@ int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t *sdu_ptr, int length)
 					{
 						uint8_t temp_imsi = paging_record.ue_id.imsi()[k];
 						imsi_str.append(std::to_string(temp_imsi));
-						print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING);
 						mcs_tracking->increase_nof_api_msg();
 						ret = SRSRAN_SUCCESS;
 					}
+					print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING);
 					// printf("Found IMSI paging\n");
 					ret = SRSRAN_SUCCESS;
 				}
@@ -114,7 +114,7 @@ int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t *sdu_ptr, int length)
 				{
 					uint32_t m_tmsi = paging_record.ue_id.s_tmsi().m_tmsi.to_number();
 					std::stringstream ss;
-					ss << std::hex << m_tmsi;
+					ss << std::hex << std::setw(8) << std::setfill('0') << m_tmsi;
 					std::string m_tmsi_str = ss.str();
 					print_api_dl(dl_sf->tti, 65534, ID_TMSI, m_tmsi_str, MSG_PAGING);
 					mcs_tracking->increase_nof_api_msg();
@@ -178,6 +178,47 @@ int PDSCH_Decoder::decode_rrc_connection_setup(uint8_t *sdu_ptr, int length, lte
 	}
 	return SRSRAN_ERROR;
 }
+ int  PDSCH_Decoder::decode_rrc_connection_reconfig(uint8_t *sdu_ptr, int length, DL_Sniffer_PDU_info_t &pdu_info, int tti_tx_dl){
+	int ret = SRSRAN_ERROR;
+	asn1::rrc::dl_dcch_msg_s  dl_dcch_msg;
+	asn1::cbit_ref bref(sdu_ptr, length);
+	if (dl_dcch_msg.unpack(bref) == asn1::SRSASN_SUCCESS &&
+		dl_dcch_msg.msg.type() == asn1::rrc::dl_dcch_msg_type_c::types::c1) {
+
+		if (dl_dcch_msg.msg.c1().type() == asn1::rrc::dl_dcch_msg_type_c::c1_c_::types::rrc_conn_recfg){
+			// std::cout << "[MAC] SF: " << tti_tx_dl/10 <<":" << tti_tx_dl%10
+			// << " => Detected RRC Reconfig " << std::endl;
+
+			/* Decode RRC Conn Reconfig to obtain IP address of UE*/
+			asn1::rrc::rrc_conn_recfg_s mob_reconf;
+			mob_reconf = dl_dcch_msg.msg.c1().rrc_conn_recfg();
+			uint32_t nas_size = mob_reconf.crit_exts.c1().rrc_conn_recfg_r8().ded_info_nas_list[0].size(); // nas list has many nas msg
+			LIBLTE_BYTE_MSG_STRUCT nas_msg;
+			nas_msg.N_bytes = nas_size;
+			/*assume that our nas message is in index 0*/
+			memcpy(nas_msg.msg, mob_reconf.crit_exts.c1().rrc_conn_recfg_r8().ded_info_nas_list[0].data(), nas_size);
+			uint8  pd           = 0;
+			uint8  msg_type     = 0;
+			liblte_mme_parse_msg_header(&nas_msg, &pd, &msg_type);
+			if (msg_type == LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT){
+				LIBLTE_MME_ATTACH_ACCEPT_MSG_STRUCT attach_accept = {};
+				LIBLTE_ERROR_ENUM err = liblte_mme_unpack_attach_accept_msg(&nas_msg, &attach_accept);
+				if (err == LIBLTE_SUCCESS){
+					LIBLTE_MME_ACTIVATE_DEFAULT_EPS_BEARER_CONTEXT_REQUEST_MSG_STRUCT act_def_eps_bearer_context_req = {};
+					liblte_mme_unpack_activate_default_eps_bearer_context_request_msg(&attach_accept.esm_msg,
+																					&act_def_eps_bearer_context_req);				
+					if (attach_accept.guti_present){
+						pdu_info.tmsi = attach_accept.guti.guti.m_tmsi;
+						ret = SRSRAN_SUCCESS;
+					}
+				}
+			}
+			pdu_info.pdu_type = pdu_rrc_con_reconfig;
+
+		}
+	}
+	return ret;
+ }
 
 int PDSCH_Decoder::run_decode(int &mimo_ret,
 							  srsran_dci_format_t cur_format,
@@ -245,7 +286,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 				bool found_res = false;
 				while (pdu.next() && !found_res)
 				{
-					if (pdu.get()->is_sdu())
+					if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 0)
 					{
 						int payload_length = pdu.get()->get_payload_size();
 						uint8_t *sdu_ptr = pdu.get()->get_sdu_ptr();
@@ -262,6 +303,18 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 								mcs_tracking->set_has_default_config();
 							}
 							mcs_tracking->update_ue_config_rnti(cur_rnti, ue_config);
+						}
+					}else if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 1 && (api_mode == 0 || api_mode == 3)){
+						int sdu_length = pdu.get()->get_payload_size();
+						uint8_t *sdu_ptr = pdu.get()->get_sdu_ptr() + 3; // assume that header is 3 bytes
+						//decode RRC Coonection Reconfiguration
+						DL_Sniffer_PDU_info_t pdu_info = {};
+						int ret = decode_rrc_connection_reconfig(sdu_ptr, sdu_length, pdu_info, tti);
+						if (ret == SRSRAN_SUCCESS && (api_mode == 0 || api_mode == 3)){
+							std::stringstream ss;
+							ss << std::hex << std::setw(8) << std::setfill('0') << pdu_info.tmsi;
+							std::string tmsi_str = ss.str();
+							print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG);
 						}
 					}
 					else
@@ -744,6 +797,79 @@ void print_dl_grant_dci(srsran_dci_dl_t &dl_dci, uint16_t tti, uint16_t rnti)
 	std::cout << "[DCI] SF: " << tti / 10 << ":" << tti % 10 << "-RNTI: " << rnti << " -Format: " << dl_dci.format << " -MCS: " << dl_dci.tb[0].mcs_idx << " -RV: " << dl_dci.tb[0].rv << std::endl;
 }
 
+void PDSCH_Decoder::run_api_dl_mode(std::string RNTI_name, uint8_t *pdu, uint32_t result_length, uint16_t cur_rnti, uint32_t tti, int tb){
+	if (RNTI_name == "P_RNTI" && (api_mode == 2 || api_mode == 3))
+	{ // IMSI catching using paging messages
+		int paging_ret = decode_imsi_tmsi_paging(pdsch_res[tb].payload, result_length);
+		if (paging_ret == SRSRAN_SUCCESS)
+		{
+			pcapwriter->write_dl_paging_api(pdsch_res[tb].payload, result_length, cur_rnti, true, tti, false);
+		}
+	}
+	if (RNTI_name == "C_RNTI")
+	{
+		/*Unpack PDSCH msg to receive SDU, SDU and then decode RRC Connection Setup*/
+		srsran::sch_pdu pdu(20, srslog::fetch_basic_logger("MAC"));
+		pdu.init_rx(result_length, false);
+		pdu.parse_packet(pdsch_res[tb].payload);
+		bool is_rrc_connection_setup = false;
+		int subh_idx = 0;
+		sch_subh sub_header[4];
+		bool found_res = false;
+		while (pdu.next())
+		{
+			if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 0)
+			{
+				int payload_length = pdu.get()->get_payload_size();
+				uint8_t *sdu_ptr = pdu.get()->get_sdu_ptr();
+				/* Decode RRC Connection Setup to obtain UE Specific Configuration*/
+				ltesniffer_ue_spec_config_t ue_config = {};
+				int rrc_ret = decode_rrc_connection_setup(sdu_ptr, payload_length, &ue_config);
+				if (rrc_ret == SRSRAN_SUCCESS)
+				{ // success means RRC Connection Setup
+					is_rrc_connection_setup = true;
+				}
+			}else if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 1 && (api_mode == 0 || api_mode == 3)){
+				int sdu_length = pdu.get()->get_payload_size();
+				uint8_t *sdu_ptr = pdu.get()->get_sdu_ptr() + 3; // assume that header is 3 bytes
+				//decode RRC Coonection Reconfiguration
+				DL_Sniffer_PDU_info_t pdu_info = {};
+				int ret = decode_rrc_connection_reconfig(sdu_ptr, sdu_length, pdu_info, tti);
+				if (ret == SRSRAN_SUCCESS && (api_mode == 0 || api_mode == 3)){
+					std::stringstream ss;
+					ss << std::hex << std::setw(8) << std::setfill('0') << pdu_info.tmsi;
+					std::string tmsi_str = ss.str();
+					print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG);
+					mcs_tracking->increase_nof_api_msg();
+				}
+			}else{
+				sub_header[subh_idx] = *pdu.get();
+				subh_idx++;
+			}
+			if (is_rrc_connection_setup && (api_mode == 0 || api_mode == 3))
+			{
+				for (int h = 0; h < 4 && !found_res; h++)
+				{
+					if ((dl_sch_lcid)sub_header[h].lcid_value() == dl_sch_lcid::CON_RES_ID)
+					{
+						uint64_t contention_resolution = sub_header[h].get_con_res_id();
+						std::stringstream ss;
+						ss << std::hex << contention_resolution;
+						std::string temp_con_res_str = ss.str();
+						std::string con_res_str = temp_con_res_str.substr(3, 8);
+						// printf("[API] SF: %d-%d Found RRC Connection Setup, Contention Resolution = %s, RNTI = %d \n",
+						// 		tti/10, tti%10, con_res_str.c_str(), cur_rnti);
+						print_api_dl(tti, cur_rnti, ID_CON_RES, con_res_str, MSG_CON_SET);
+						mcs_tracking->increase_nof_api_msg();
+						found_res = true;
+					}
+				}
+				pcapwriter->write_dl_crnti_api(pdsch_res[tb].payload, result_length, cur_rnti, true, tti, false);
+			}
+		}
+	}
+}
+
 int PDSCH_Decoder::decode_dl_mode()
 {
 	uint32_t tti = sfn * 10 + sf_idx;
@@ -915,7 +1041,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								sch_subh sub_header[4];
 								while (pdu.next())
 								{
-									if (pdu.get()->is_sdu())
+									if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 0)
 									{
 										int payload_length = pdu.get()->get_payload_size();
 										uint8_t *sdu_ptr = pdu.get()->get_sdu_ptr();
@@ -933,6 +1059,11 @@ int PDSCH_Decoder::decode_dl_mode()
 										}
 									}
 								}
+							}
+
+							if (api_mode == 0 || api_mode == 1 || api_mode == 3)
+							{
+								run_api_dl_mode(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, tb);
 							}
 						}
 						if (cur_rnti != 65535 && cur_grant->tb[tb].enabled && (target_rnti == 0 || cur_rnti == target_rnti) && en_debug)
@@ -1020,6 +1151,10 @@ int PDSCH_Decoder::decode_dl_mode()
 										}
 									}
 								}
+							}
+							if (api_mode == 0 || api_mode == 1 || api_mode == 3)
+							{
+								run_api_dl_mode(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, tb);
 							}
 							// update mcs table to database only when mcs_idx > 0 (0 index is overlap in both tables):
 							if (cur_ran_dci_dl->tb[tb].mcs_idx > 0 && cur_ran_dci_dl->tb[tb].mcs_idx < 29 && decoding_mem.format > SRSRAN_DCI_FORMAT1A && result_length > 0)
@@ -1319,6 +1454,9 @@ std::string convert_msg_name_dl(int msg)
 		break;
 	case 5:
 		ret = "Paging";
+		break;
+	case 6:
+		ret = "RRC Connection Reconfig";
 		break;
 	default:
 		ret = "-";

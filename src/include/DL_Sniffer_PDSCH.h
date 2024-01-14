@@ -9,6 +9,9 @@
 #include "srsran/mac/pdu.h"
 #include "srsue/hdr/stack/mac/proc_ra.h"
 #include "srsran/asn1/rrc/dl_ccch_msg.h"
+#include "srsran/asn1/rrc/dl_dcch_msg.h"
+#include "srsran/asn1/asn1_utils.h"
+#include "srsran/asn1/liblte_mme.h"
 #include "srsran/asn1/rrc/paging.h"
 // #include "srsran/asn1/rrc/dl_dcch_msg.h"
 
@@ -59,6 +62,18 @@ struct DL_Sniffer_rar_result
     srsran_pusch_grant_t ran_ul_grant = {};
 };
 
+enum PDUDecodingResult_t {
+    pdu_rrc_con_set = 0,
+    pdu_rrc_con_request = 1,
+    pdu_rrc_con_reconfig = 2,
+    pdu_unknown = 3
+};
+
+struct DL_Sniffer_PDU_info_t
+{
+    PDUDecodingResult_t pdu_type = pdu_unknown;
+    uint32_t tmsi = 0;
+};
 
 class PDSCH_Decoder
 {
@@ -92,9 +107,18 @@ public:
                            uint32_t sfn,
                            uint32_t sf_idx);
     void unpack_pdsch_message(uint8_t* sdu_ptr, int length);
-    int  decode_rrc_connection_setup(uint8_t* sdu_ptr, int length, ltesniffer_ue_spec_config_t *ue_config);                       
+    int  decode_rrc_connection_setup(uint8_t* sdu_ptr, int length, ltesniffer_ue_spec_config_t *ue_config);
+    int  decode_rrc_connection_reconfig(uint8_t *sdu_ptr, int length, DL_Sniffer_PDU_info_t &pdu_info, int tti_tx_dl);                    
     int  decode_imsi_tmsi_paging(uint8_t* sdu_ptr, int length);
 
+    void run_api_dl_mode(std::string RNTI_name, 
+                        uint8_t *pdu, 
+                        uint32_t 
+                        pdu_len_bytes, 
+                        uint16_t crnti, 
+                        uint32_t tti, 
+                        int tb);
+    
     int  run_decode(int &mimo_ret,
                     srsran_dci_format_t cur_format,
                     srsran_dci_dl_t *cur_ran_dci_dl,
