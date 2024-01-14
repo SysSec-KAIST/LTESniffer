@@ -15,7 +15,7 @@ Please refer to our [paper][paper] for more details.
 
 This branch enables the recording of IQ data from synchronized subframes to a file for subsequent decoding. It supports recording subframes in both Downlink and Uplink sniffing modes, which means it can record both Downlink and Uplink subframes concurrently. The recorded file is compatible with LTESniffer's offline decoding mode, making it possible to run on different PCs or locations without the need for an SDR. This functionality is particularly useful for overcoming performance issues associated with real-time decoding on lower-performance CPUs. LTESniffer can sequentially read and decode subframes from recorded files, eliminating the necessity for high-performance CPUs in real-time scenarios. Additionally, this feature simplifies the debugging process by allowing customization of LTESniffer's code and comparison of results with the same input file. For detailed instructions, please refer to the section below.
 
-**Caution:** You should have to check your local regulation before sharing recorded files to other people. This 
+**Caution:** You should have to check your local regulations before sharing recorded files to other people.
 
 **The following hardware is recommended**
 - Single PC with Intel i7 CPU (not necessarily a high-performance PC for data recording)
