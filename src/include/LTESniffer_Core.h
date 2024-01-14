@@ -120,4 +120,7 @@ private:
   UL_HARQ                 ul_harq; // test UL_HARQ
   HARQ                    harq; // test HARQ function
   int                     harq_mode;
+
+  srsran_filesink_t file_sink = {};
+  std::string       file_sink_name = "subframe_iq_sample.bin";
 };

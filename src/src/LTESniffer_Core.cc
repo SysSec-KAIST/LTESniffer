@@ -102,6 +102,10 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   for (int i = 0; i<100; i++){
     ta_buffer.ta_last_sample[i] = 0;
   }
+
+  /*Init file sink for saving subframe IQ data*/
+  const char* file_name_char = file_sink_name.c_str();
+  srsran_filesink_init(&file_sink, file_name_char, SRSRAN_COMPLEX_FLOAT_BIN);
 }
 
 bool LTESniffer_Core::run(){
@@ -415,39 +419,22 @@ bool LTESniffer_Core::run(){
                   //disallow RNTI=0 for all formats
                 rntiManager.addForbidden(0x0, 0x0, f);
               }
+
+              std::string sniffermode = (sniffer_mode==DL_MODE)?"DL_MODE":"UL_MODE";
+              std::cout << "[FILE SINK] Start writing to file, Number of antennas: " << args.rf_nof_rx_ant \
+              << " -- Sniffer Mode: " << sniffermode << " -- Total requested subframes: " << args.nof_subframes <<  std::endl;
+              
+              size_t nof_samples = SRSRAN_SF_LEN_PRB(cell.nof_prb);
+              srsran_filesink_write_multi(&file_sink, reinterpret_cast<void**>(cur_worker->getBuffers()),nof_samples, args.rf_nof_rx_ant);
             }
           }
           break;
         case DECODE_PDSCH:
-          if ((mcs_tracking.get_nof_api_msg()%30) == 0 && api_mode > -1){
-            print_api_header();
-            mcs_tracking.increase_nof_api_msg();
-            if (mcs_tracking.get_nof_api_msg() > 30){
-              mcs_tracking.reset_nof_api_msg();
-            }
-          }
-          uint32_t tti = sfn * 10 + sf_idx;
-
-          /* Prepare sf_idx and sfn for worker , SF_NRM only*/
-          dl_sf.tti = tti;
-          dl_sf.sf_type = SRSRAN_SF_NORM;
-          cur_worker->prepare(sf_idx, sfn, sf_cnt % (args.dci_format_split_update_interval_ms) == 0, dl_sf);
-
-          /*Get next worker from avail list*/
-          std:shared_ptr<SubframeWorker> next_worker;
-          if(args.input_file_name == "") {
-            next_worker = phy->getAvailImmediate();  //here non-blocking if reading from radio
-          } else {
-            next_worker = phy->getAvail();  // blocking if reading from file
-          }
-          if(next_worker != nullptr) {
-            phy->putPending(std::move(cur_worker));
-            cur_worker = std::move(next_worker);
-          } else {
-            // cout << "No worker available. Skipping subframe " << sfn << 
-            //                                         "." << sf_idx << endl;
-            skip_cnt++;
-            skip_last_1s++;
+          /*Save IQ data of synchronized subframes to file*/
+          size_t nof_samples = SRSRAN_SF_LEN_PRB(cell.nof_prb);
+          srsran_filesink_write_multi(&file_sink, reinterpret_cast<void**>(cur_worker->getBuffers()),nof_samples, args.rf_nof_rx_ant);
+          if ((sfn % 50 == 0) && (sf_idx == 0)){
+            std::cout << "[FILE SINK] Recorded " << sf_cnt << " subframes to file" << std::endl;
           }
           break;
       }
@@ -460,49 +447,6 @@ bool LTESniffer_Core::run(){
         sfn = 0;
       }
       total_sf++;
-      if ((total_sf%1000)==0 && (api_mode == -1)){
-        auto now = std::chrono::system_clock::now();
-        std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
-        std::string str_cur_time(std::ctime(&cur_time));
-        std::string cur_time_second = str_cur_time.substr(11,8);
-        std::cout << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
-        mcs_tracking_timer++;
-        update_rnti_timer ++;
-        skip_last_1s = 0;
-      }
-      if (update_rnti_timer == mcs_tracking.get_interval()){
-        switch (sniffer_mode)
-        {
-        case DL_MODE:
-          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
-          break;
-        case UL_MODE:
-          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
-          break;
-        default:
-          break;
-        }
-        update_rnti_timer = 0;
-      }
-      /* Update 256tracking and harq database, delete the inactive RNTIs*/
-      if (mcs_tracking_timer == 10){
-        switch (sniffer_mode)
-        {
-        case DL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_dl();}
-          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
-          if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
-          mcs_tracking_timer = 0;
-          break;
-        case UL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_ul();}
-          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
-          mcs_tracking_timer = 0;
-          break;
-        default:
-          break;
-        }
-      }
     } else if(ret == 0){ //get buffer wrong or out of sync
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
@@ -526,46 +470,24 @@ bool LTESniffer_Core::run(){
     sf_cnt++;
 
   } // main loop
-
-  /* Print statistic of 256tracking*/
-  if (mcs_tracking_mode){
-    switch (sniffer_mode)
-    {
-    case DL_MODE:
-      mcs_tracking.merge_all_database_dl();
-      if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
-      break;
-    case UL_MODE:
-      mcs_tracking.merge_all_database_ul();
-      if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
-      break;
-    default:
-      break;
-    }
+  if (sf_cnt == args.nof_subframes){
+    std::cout << "[FILE SINK] Finish recording to file " << sf_cnt << " subframes" << std::endl;
   }
+
 
   phy->joinPending();
 
   std::cout << "Destroyed Phy" << std::endl;
   if (args.input_file_name == ""){
     srsran_rf_close(&rf);
-    //srsran_ue_dl_free(falcon_ue_dl.q);
     srsran_ue_sync_free(&ue_sync);
     srsran_ue_mib_free(&ue_mib);
   }
-  //common->getRNTIManager().printActiveSet();
   cout << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
-  //phy->getCommon().getRNTIManager().printActiveSet();
-  //rnti_manager_print_active_set(falcon_ue_dl.rnti_manager);
 
   phy->getCommon().printStats();
   cout << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
   
-  /* Print statistic of 256tracking*/
-  // if (mcs_tracking_mode){ mcs_tracking.print_database_ul(); }
-
-  /* Print statistic of harq retransmission*/
-  //if (harq_mode){ harq.printHARQDatabase(); }
   return EXIT_SUCCESS;
 }
 
@@ -584,6 +506,8 @@ LTESniffer_Core::~LTESniffer_Core(){
   // harq_map    = nullptr;
   // delete        phy;
   // phy         = nullptr;
+  srsran_filesink_free(&file_sink);
+  std::cout << "Free File_sink" << std::endl;
   printf("Deleted DL Sniffer core\n");
 }
 

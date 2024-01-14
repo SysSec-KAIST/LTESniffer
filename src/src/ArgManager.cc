@@ -12,7 +12,7 @@
 using namespace std;
 
 void ArgManager::defaultArgs(Args& args) {
-  args.nof_subframes = DEFAULT_NOF_SUBFRAMES_TO_SHOW;
+  args.nof_subframes = DEFAULT_NOF_SUBFRAMES_TO_CAPTURE;
   args.cpu_affinity = -1;
   args.enable_ASCII_PRB_plot = true;
   args.enable_ASCII_power_plot = false;
