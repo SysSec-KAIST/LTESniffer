@@ -20,10 +20,11 @@ LTESniffer **CANNOT DECRYPT** encrypted messages between the cell tower and smar
 The main purpose of LTESniffer is to support security and analysis research on the cellular network. Due to the collection of uplink-downlink user data, any use of LTESniffer must follow the local regulations on sniffing the LTE traffic. We are not responsible for any illegal purposes such as intentionally collecting user privacy-related information.
 
 ## Features
-### New Update
+### New Update v2.1.0
 - Supports recording IQ raw data of subframes to file. Please refer to `LTESniffer-record-subframe` branch and its [README][capture-readme] for more details.
 - Supports offline decoding using recorded files ([README][capture-readme]).
 - Enable API in the downlink mode (only apply for identity collecting and mapping API)
+### New Update v2.0.0
 - Supports two USRP B-series for uplink sniffing mode. Please refer to `LTESniffer-multi-usrp` branch and its [README][multi-readme] for more details.
 - Fixed some bugs.
 
@@ -43,7 +44,7 @@ LTESniffer is implemented on top of [FALCON][falcon] with the help of [srsRAN][s
 Currently, LTESniffer works stably on Ubuntu 18.04/20.04/22.04.
 
 ### Hardware Requirement
-Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores. Especially when the base station has many active users during the peak hour. LTESniffer was able to achieve real-time decoding when running on an Intel i7-9700K PC to decode traffic on a base station with 150 active users.
+Achieving real-time decoding of LTE traffic requires a high-performance CPU with multiple physical cores, especially during peak hours when the base station has many active users. LTESniffer successfully achieved real-time decoding when deployed on an Intel i7-9700K PC, decoding traffic from a base station with 150 active users.
 
 **The following hardware is recommended**
 - Intel i7 CPU with at least 8 physical cores
