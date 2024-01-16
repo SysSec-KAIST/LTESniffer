@@ -179,6 +179,7 @@ bool LTESniffer_Core::run(){
   float search_cell_cfo = 0;  // freg. offset
   uint32_t sfn = 0;           // system frame number
   uint32_t skip_cnt = 0;      // number of skipped subframe
+  uint32_t rx_fail_cnt = 0;   // number of failed receive sample errors from UHD
   uint32_t total_sf = 0;
   uint32_t skip_last_1s = 0;
   uint16_t nof_lost_sync = 0;
@@ -477,8 +478,15 @@ bool LTESniffer_Core::run(){
       if (args.input_file_name != ""){
         std::cout << "Finish reading from file" << std::endl;
       }
-      ERROR("Error calling srsran_ue_sync_work()");
-      control_msg << "Error calling srsran_ue_sync_work()" << std::endl;
+      rx_fail_cnt++;
+      ERROR("Error calling srsran_ue_sync_work() cnt: %d", rx_fail_cnt);
+      control_msg << "Error calling srsran_ue_sync_work() cnt: " << to_string(rx_fail_cnt) << std::endl;
+      if(rx_fail_cnt>UHD_FAIL_LIMIT){
+        control_msg << "EXITING because of UHD Error Limit Reached: " << to_string(UHD_FAIL_LIMIT) << std::endl;
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
+        return EXIT_FAILURE;
+      }
       write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
       control_msg.str(std::string());
     }
@@ -594,6 +602,8 @@ bool LTESniffer_Core::run(){
         }
 
         control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
+        control_msg << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
+        control_msg << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
         write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
         control_msg.str(std::string());
 

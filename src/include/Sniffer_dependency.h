@@ -48,6 +48,8 @@
 #define DEBUG_SEC_PRINT 1 // default print if active
 #define FILE_WRITE 1 // write everything to file
 
+#define UHD_FAIL_LIMIT 5
+
 #define ID_RAN_VAL  0
 #define ID_TMSI     1
 #define ID_CON_RES  2
