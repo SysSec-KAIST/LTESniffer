@@ -216,7 +216,6 @@ uint32_t RNTIManager::getAssociatedFormatIdx(uint16_t rnti) {
 
 ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
   std::lock_guard<std::mutex> lock(rnti_mutex);
-  //for(map<u_int16_t,RNTIActiveSetItem>::iterator it = activeSet.begin(); it != activeSet.end(); it++) {
     //if(it->second.rnti == rnti) return it->second.reason;
   //} // !!!
   std::map<uint16_t,RNTIActiveSetItem>::const_iterator pos = activeSet.find(rnti);
