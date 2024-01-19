@@ -113,7 +113,7 @@ private:
     std::vector<DCI_UL>     *dci_ul;
     std::vector<DCI_UL>     *rar_dci_ul;
     int                     valid_ul_grant      = SRSRAN_ERROR;
-    int                     valid_ul_grant_256      = SRSRAN_ERROR;
+    int                     valid_ul_grant_256  = SRSRAN_ERROR;
 
     srsran_enb_ul_t         &enb_ul;
     srsran_ul_sf_cfg_t      &ul_sf;
