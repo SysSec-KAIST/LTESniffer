@@ -21,7 +21,6 @@ void LTESniffer_stat_writer::open(const std::string filename)
 void LTESniffer_stat_writer::close()
 {
   int err = -1;
-  //fprintf(stdout, "Closing Statistic file\n");
   if (stat_file) {
     err = fclose(stat_file);
   }

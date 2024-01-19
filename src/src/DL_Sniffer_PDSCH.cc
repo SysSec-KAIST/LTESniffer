@@ -335,7 +335,7 @@ int PDSCH_Decoder::decode_ul_mode(uint32_t rnti, std::vector<DL_Sniffer_rar_resu
 			int ret = run_rar_decode(cur_format, cur_ran_dci_dl, cur_grant, cur_rnti, result);
 			if (ret == SRSRAN_SUCCESS)
 			{
-				// BWS TA Print
+				// TA Print
 				float ta_min = (float) result.ta * 78.12; // ref: https://howltestuffworks.blogspot.com/2014/07/timing-advance-and-time-alignment-timer.html
 				float ta_max = (float) (result.ta + 1) * 78.12; // meters multiply by 78 meters for shortcut
 				// {min}-{max} meters ... TA_RNTI does not change per user, does per carrier?
@@ -612,14 +612,6 @@ int PDSCH_Decoder::unpack_rar_response_ul_mode(uint8_t *payload, int length, DL_
 			ul_sf.tti = dl_sf->tti;
 			ul_sniffer_ra_ul_dci_to_grant(&falcon_ue_dl->q->cell, &ul_sf, &hopping_cfg, &dci_ul, &result.ran_ul_grant);
 			rntiManager.activateAndRefresh(result.t_crnti, 0, ActivationReason::RM_ACT_RAR); // add RNTI in RAR response to active list
-			// BWS
-			// std::cout << " RAR: " << "TA = " << result.ta;
-			// std::cout << " -- T-CRNTI: " << result.t_crnti;
-			// std::cout << " -- GRANT: ";
-			// for (int g = 0; g < 20; g++){
-			// 	std::cout << unsigned(result.grant[g]) << " ";
-			// }
-			// std::cout << std::endl;
 			ret = SRSRAN_SUCCESS;
 		}
 	}
@@ -802,7 +794,7 @@ int PDSCH_Decoder::decode_dl_mode()
 			{
 				pdsch_res[tb].crc = false;
 			}
-			ltesniffer_ue_spec_config_t ue_config = mcs_tracking->get_ue_config_rnti(cur_rnti, 0); // find p_a from database // BWS
+			ltesniffer_ue_spec_config_t ue_config = mcs_tracking->get_ue_config_rnti(cur_rnti, 0); // find p_a from database
 			pdsch_cfg->p_a = ue_config.p_a;														// update p_a from database
 			bool tb_en[SRSRAN_MAX_CODEWORDS]{cur_grant->tb[0].enabled, cur_grant->tb[1].enabled};
 			int mimo_ret = SRSRAN_SUCCESS;
@@ -1160,7 +1152,7 @@ int PDSCH_Decoder::decode_dl_mode()
 
 	return SRSRAN_SUCCESS;
 }
-// BWS FIO FILE_IDX_DL_DCI
+// FIO FILE_IDX_DL_DCI
 void PDSCH_Decoder::print_debug_dl(std::string name,
 								   int tti,
 								   uint16_t rnti,
@@ -1180,10 +1172,10 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
 	if(str_cur_time.length()>=(11+8)){
-        cur_time_second = str_cur_time.substr(11,8);
-    }else{
-        cur_time_second = "";
-    }
+		cur_time_second = str_cur_time.substr(11,8);
+	}else{
+		cur_time_second = "";
+	}
 	msg << "[" << cur_time_second << "]: ";
 
 	msg << std::left << std::setw(15) << name;
@@ -1368,17 +1360,17 @@ std::string convert_msg_name_dl(int msg)
 }
 void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::string value, int msg, uint32_t ta_rnti)
 {
-	std::stringstream msg_api; // BWS
+	std::stringstream msg_api; 
 
 	auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
 	if(str_cur_time.length()>=(11+8)){
-        cur_time_second = str_cur_time.substr(11,8);
-    }else{
-        cur_time_second = "";
-    }
+		cur_time_second = str_cur_time.substr(11,8);
+	}else{
+		cur_time_second = "";
+	}
 	msg_api << "[" << cur_time_second << "]: ";
 
 	msg_api << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;

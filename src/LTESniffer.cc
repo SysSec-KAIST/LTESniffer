@@ -17,7 +17,6 @@ int main(int argc, char** argv) {
   cout << "LTESniffer Start!!!" << endl;
   cout << endl;
 
-  // BWS
   auto now = std::chrono::system_clock::now();
   std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
   std::string str_cur_time(std::ctime(&cur_time));

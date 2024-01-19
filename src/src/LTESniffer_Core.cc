@@ -23,7 +23,7 @@
 #include "srsran/common/gen_mch_tables.h"
 #include "srsran/phy/io/filesink.h"
 
-#include "include/Sniffer_file_defs.h" // BWS
+#include "include/Sniffer_file_defs.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -46,14 +46,14 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   sniffer_mode(args.sniffer_mode),
   ulsche(args.target_rnti, &ul_harq, args.en_debug),
   api_mode(args.api_mode),
-  apiwriter(), // BWS need to declare
-  dlwriter(), // BWS need to declare
-  dldciwriter(), // BWS need to declare
-  ulwriter(), // BWS need to declare
-  uldciwriter(), // BWS need to declare
-  rarwriter(), // BWS need to declare
-  otherwriter(), // BWS need to declare
-  filewriter_objs({&apiwriter, &dlwriter, &dldciwriter, &ulwriter, &uldciwriter, &rarwriter, &otherwriter}) // BWS need pointers to persist
+  apiwriter(), // need to declare
+  dlwriter(), // need to declare
+  dldciwriter(), // need to declare
+  ulwriter(), // need to declare
+  uldciwriter(), // need to declare
+  rarwriter(), // need to declare
+  otherwriter(), // need to declare
+  filewriter_objs({&apiwriter, &dlwriter, &dldciwriter, &ulwriter, &uldciwriter, &rarwriter, &otherwriter}) // need pointers to persist
 {
   /*create pcap writer and name of output file*/    
   auto now = std::chrono::system_clock::now();
@@ -68,9 +68,9 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
       *it = '.';
     }
   }
-  // BWS
+
   std::string stat_folder = "/home/stats/";
-  filewriter_objs[FILE_IDX_CONTROL]->open((stat_folder + "LETTUCE_control_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_CONTROL]->open((stat_folder + "LETTUCE_control_" + str_cur_time + "ansi")); 
   std::stringstream control_msg_contruct;
 
   control_msg_contruct << "\nLTESniffer_Core: Starting...\n\n";
@@ -80,7 +80,7 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   if(sniffer_mode==0){mode_str = "DL only";}
   else if(sniffer_mode==1){mode_str = "UL only";}
   else if(sniffer_mode==2){mode_str = "DL & UL";}
-  control_msg_contruct << "Sniffer Mode: " << mode_str << std::endl; // BWS
+  control_msg_contruct << "Sniffer Mode: " << mode_str << std::endl; 
 
   // File Writers
     // std::string pcap_file_name = "ul_pcap_" + str_cur_time + "pcap";
@@ -102,23 +102,25 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   errfile = freopen(error_filename.c_str(),"w",stderr);
 
   std::string out_filename = stat_folder + "LETTUCE_stdout_" + str_cur_time + "ansi";
-  // BWS this will do the same format on command line with tee 
+  // this will do the same format on command line with tee 
   //    date +"LETTUCE_stdout_%a_%b__%-d_%H.%M.%S_%Y.ansi"
-  //outfile = freopen(out_filename.c_str(),"w",stdout);
+  //    outfile = freopen(out_filename.c_str(),"w",stdout);
 
-  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); // BWS
-  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); // BWS
-  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); // BWS
+  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); 
+  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); 
 
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
   /*Set multi offset in ULSchedule*/
-  int multi_offset_toggle = 0; // BWS
-  if((sniffer_mode == UL_MODE) || (sniffer_mode == DL_UL_MODE)) {multi_offset_toggle = 1;}
-  ulsche.set_multi_offset(multi_offset_toggle); // BWS
+  int multi_offset_toggle = 0; 
+  if((sniffer_mode == UL_MODE) || (sniffer_mode == DL_UL_MODE)) {
+    multi_offset_toggle = 1;
+  }
+  ulsche.set_multi_offset(multi_offset_toggle); 
   /*Create PHY*/
   phy = new Phy(args.rf_nof_rx_ant,
                 args.nof_sniffer_thread,
@@ -168,7 +170,6 @@ bool LTESniffer_Core::run(){
   srsran_pdsch_cfg_t pdsch_cfg;
   srsran_ue_sync_t   ue_sync;
 
-  // BWS 
   std::stringstream control_msg;
 
 #ifndef DISABLE_RF
@@ -253,7 +254,7 @@ bool LTESniffer_Core::run(){
     } else if (sniffer_mode == DL_MODE && args.ul_freq != 0){
       control_msg << "Uplink Frequency must be 0 in the DL Sniffer Mode \n";
       ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode");
-    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq != 0){ // BWS
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq != 0){ 
       control_msg << "Tunning DL receiver to " << std::fixed << std::setprecision(3) << ((args.rf_freq + args.file_offset_freq) / 1000000) << std::endl;
       //printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
       if (srsran_rf_set_rx_freq(&rf, 0, args.rf_freq + args.file_offset_freq)) {
@@ -265,7 +266,7 @@ bool LTESniffer_Core::run(){
       if (srsran_rf_set_rx_freq(&rf, 1, args.ul_freq )){
         //ERROR("Tunning UL Freq failed \n");
       }
-    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq == 0){ // BWS
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq == 0){ 
       control_msg << "Uplink Frequency must be defined in the UL Sniffer Mode \n";
       ERROR("Uplink Frequency must be defined in the UL Sniffer Mode");
     }
@@ -417,7 +418,6 @@ bool LTESniffer_Core::run(){
   write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
   control_msg.str(std::string());
 
-  // BWS
   srsran_sync_set_threshold(&ue_sync.sfind, 2.0);
 
   // Disable CP based CFO estimation during find
@@ -589,16 +589,16 @@ bool LTESniffer_Core::run(){
         sfn = 0;
       }
       total_sf++;
-      // BWS
+
       if ((total_sf%1000)==0){// && (api_mode == -1)){
         auto now = std::chrono::system_clock::now();
         std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
         std::string str_cur_time(std::ctime(&cur_time));
         std::string cur_time_second;
         if(str_cur_time.length()>=(11+8)){
-            cur_time_second = str_cur_time.substr(11,8);
+          cur_time_second = str_cur_time.substr(11,8);
         }else{
-            cur_time_second = "";
+          cur_time_second = "";
         }
 
         control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
@@ -621,7 +621,7 @@ bool LTESniffer_Core::run(){
         case UL_MODE:
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           break;
-        case DL_UL_MODE: // BWS
+        case DL_UL_MODE: 
           // Downlink
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           // Uplink
@@ -648,9 +648,9 @@ bool LTESniffer_Core::run(){
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           mcs_tracking_timer = 0;
           break;
-        case DL_UL_MODE: // BWS
+        case DL_UL_MODE: 
           // Downlink
-          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], 1); // BWS force DL to not print in DL/UL mode
+          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], 1); // force DL to not print in DL/UL mode
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           // Uplink
@@ -682,7 +682,7 @@ bool LTESniffer_Core::run(){
         srsran_pbch_decode_reset(&ue_mib.pbch);
         nof_lost_sync = 0;
       }
-      // BWS
+      
       if(srsran_sync_get_peak_value(&ue_sync.sfind) > srsran_sync_get_threshold(&ue_sync.sfind)){
         control_msg << "Found PSS... NID2: "  << cell.id % 3 <<
                 ", Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
@@ -714,10 +714,10 @@ bool LTESniffer_Core::run(){
       mcs_tracking.merge_all_database_ul();
       mcs_tracking.print_all_database_ul(filewriter_objs[FILE_IDX_UL], api_mode); 
       break;
-    case DL_UL_MODE: // BWS
+    case DL_UL_MODE: 
       // Downlink
       mcs_tracking.merge_all_database_dl();
-      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); // BWS allow final DL table in DL/UL mode
+      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); // allow final DL table in DL/UL mode
       // Uplink
       mcs_tracking.merge_all_database_ul();
       mcs_tracking.print_all_database_ul(filewriter_objs[FILE_IDX_UL], api_mode); 
@@ -767,19 +767,17 @@ void LTESniffer_Core::handleSignal() {
 
 LTESniffer_Core::~LTESniffer_Core(){
   pcapwriter.close();
-  // BWS
   errfile = freopen("/dev/tty","r",stderr);
   fclose (stderr);
   //outfile = freopen("/dev/tty","r",stdout);
   //fclose (stdout);
-  // BWS
-  filewriter_objs[FILE_IDX_API]->close(); // BWS
-  filewriter_objs[FILE_IDX_DL]->close(); // BWS
-  filewriter_objs[FILE_IDX_DL_DCI]->close(); // BWS
-  filewriter_objs[FILE_IDX_UL]->close(); // BWS
-  filewriter_objs[FILE_IDX_UL_DCI]->close(); // BWS
-  //filewriter_objs[FILE_IDX_RAR]->close(); // BWS
-  filewriter_objs[FILE_IDX_CONTROL]->close(); // BWS
+  filewriter_objs[FILE_IDX_API]->close(); 
+  filewriter_objs[FILE_IDX_DL]->close(); 
+  filewriter_objs[FILE_IDX_DL_DCI]->close(); 
+  filewriter_objs[FILE_IDX_UL]->close(); 
+  filewriter_objs[FILE_IDX_UL_DCI]->close(); 
+  //filewriter_objs[FILE_IDX_RAR]->close(); 
+  filewriter_objs[FILE_IDX_CONTROL]->close(); 
   // delete        harq_map;
   // harq_map    = nullptr;
   // delete        phy;
@@ -833,9 +831,9 @@ void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
 	if(str_cur_time.length()>=(11+8)){
-      cur_time_second = str_cur_time.substr(11,8);
+    cur_time_second = str_cur_time.substr(11,8);
   }else{
-      cur_time_second = "";
+    cur_time_second = "";
   }
 	msg_api << "[" << cur_time_second << "]: ";
 
@@ -888,7 +886,7 @@ void cell_print(LTESniffer_stat_writer* filewriter_obj, srsran_cell_t* cell, uin
       break;
   }
   mystring = mystring + "\n";
-  mystring = mystring + " - SFN:             " + std::to_string(sfn) + "\n,";
+  mystring = mystring + " - SFN:             " + std::to_string(sfn) + "\n";
 
   filewriter_obj->write_stats(mystring);
   std::cout << mystring;

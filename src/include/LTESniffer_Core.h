@@ -33,7 +33,7 @@
 #include "srsran/common/mac_pcap.h"
 #include "Phy.h"
 #include "PcapWriter.h"
-#include "FileWriter.h" // BWS
+#include "FileWriter.h" 
 #include "HARQ.h"
 #include <ctime>
 #include <iostream>
@@ -66,7 +66,6 @@ using namespace srsran;
 #define UL_SNIFFER_UL_OFFSET_32 32
 #define UL_SNIFFER_UL_OFFSET_64 64
 
-// BWS
 void write_file_and_console(std::string mystring, LTESniffer_stat_writer* filewriter_obj);
 void cell_print(LTESniffer_stat_writer* filewriter_obj, srsran_cell_t* cell, uint32_t sfn);
 

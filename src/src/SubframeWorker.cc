@@ -86,7 +86,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
       return;
     }
     break;
-  case DL_UL_MODE: // BWS
+  case DL_UL_MODE: 
     // Downlink/Uplink
     /* Config for Downlink Sniffing function*/
     srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, 1); // only 1 antenna for DL in the UL Sniffer Mode
@@ -232,7 +232,7 @@ void SubframeWorker::work()
       // printf("[SIGNAL] Bad signal quality... \n");
     }
     break;
-  case DL_UL_MODE: // BWS
+  case DL_UL_MODE: 
     dciSearch.prepareDCISearch(); // set single antenna for DL in the UL Sniffer mode
     snr_ret = dciSearch.search();
     if (snr_ret == SRSRAN_SUCCESS)

@@ -21,7 +21,7 @@
 #endif
 
 #include "falcon/phy/falcon_phch/falcon_dci.h"
-#include "FileWriter.h" // BWS
+#include "FileWriter.h" 
 
 #ifdef __cplusplus
 }
@@ -110,7 +110,7 @@ public:
     int  nof_RNTI_member_ul(){ return tracking_database_ul_mode.size();}
     void print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode);
     void merge_all_database_ul();
-    void print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode); // BWS
+    void print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode); 
     void update_statistic_ul(uint16_t RNTI, bool success, DCI_UL &decoding_mem, float snr, float ta);
 
     /*DL 256QAM/64QAM tracking implementation*/
@@ -121,7 +121,7 @@ public:
     int  nof_RNTI_member_dl(){ return tracking_database_dl_mode.size();}
     void print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode);
     void merge_all_database_dl();
-    void print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode); // BWS
+    void print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode); 
     void update_rar_time_crnti(uint16_t crnti, clock_t cur_time);
     void update_statistic_dl(uint16_t RNTI,
                             bool tb_en[SRSRAN_MAX_CODEWORDS],

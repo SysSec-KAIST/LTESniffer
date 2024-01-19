@@ -53,7 +53,6 @@ ul_sniffer_mod_tracking_t MCSTracking::find_tracking_info_RNTI_ul(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_mod;
     }
-    //trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_ul(uint16_t RNTI, ul_sniffer_mod_tracking_t mcs_mod)
@@ -312,13 +311,7 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
 
-    std::stringstream msg; // BWS
-
-    // auto now = std::chrono::system_clock::now();
-	// std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
-	// std::string str_cur_time(std::ctime(&cur_time));
-	// std::string cur_time_second = str_cur_time.substr(11,8);
-	// msg << "[" << cur_time_second << "]: ";
+    std::stringstream msg; 
 
     int nof_16qam = 0;
     int nof_64qam = 0;
@@ -407,7 +400,6 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
         }
     }
     
-    // BWS
     msg << "[256Tracking] Total: ";
     msg << std::right << std::setw(6) << nof_64qam;
     msg << " RNTIs are 64QAM table, ";
@@ -417,8 +409,7 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
     msg << " RNTIs are Unknown ";
     msg << std::endl; 
     msg << std::endl;
-    //printf("[256Tracking] Total: %d RNTIs are max 16QAM table, %d RNTIs are max 64QAM table, %d RNTIs are max 256QAM, %d RNTIs are Unknown \n\n",
-    //       nof_16qam, nof_64qam, nof_256qam, nof_unknown);
+
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
@@ -434,7 +425,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
 
-    std::stringstream msg; // BWS
+    std::stringstream msg; 
 
     int nof_16qam = 0;
     int nof_64qam = 0;
@@ -452,7 +443,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
-	if(str_cur_time.length()>=(11+8)){
+    if(str_cur_time.length()>=(11+8)){
         cur_time_second = str_cur_time.substr(11,8);
     }else{
         cur_time_second = "";
@@ -781,7 +772,6 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
         }
     }
     
-    // BWS
     msg << "[256Tracking] Total: ";
     msg << std::right << std::setw(6) << nof_64qam;
     msg << " RNTIs are 64QAM table, ";
@@ -791,8 +781,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     msg << " RNTIs are Unknown ";
     msg << std::endl; 
     msg << std::endl;
-    //printf("[256Tracking] Total: %d RNTIs are max 16QAM table, %d RNTIs are max 64QAM table, %d RNTIs are max 256QAM, %d RNTIs are Unknown \n\n",
-    //       nof_16qam, nof_64qam, nof_256qam, nof_unknown);
+
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
@@ -856,7 +845,6 @@ dl_sniffer_mcs_table_t MCSTracking::find_tracking_info_RNTI_dl(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_table;
     }
-    //trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_dl(uint16_t RNTI, dl_sniffer_mcs_table_t mcs_table)
@@ -1060,15 +1048,15 @@ void print_statistic_rnti(std::stringstream &msg,std::map<uint16_t, dl_sniffer_m
 void print_header(std::stringstream &msg)
 {
     auto now = std::chrono::system_clock::now();
-	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
-	std::string str_cur_time(std::ctime(&cur_time));
-	std::string cur_time_second;
-	if(str_cur_time.length()>=(11+8)){
+    std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+    std::string str_cur_time(std::ctime(&cur_time));
+    std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
         cur_time_second = str_cur_time.substr(11,8);
     }else{
         cur_time_second = "";
     }
-	msg << "[" << cur_time_second << "]: ";
+    msg << "[" << cur_time_second << "]: ";
 
     msg << std::left << std::setw(5) << "Num";
     msg << std::left << std::setw(9) << "RNTI";
@@ -1090,13 +1078,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
     
-    std::stringstream msg; // BWS
-
-    // auto now = std::chrono::system_clock::now();
-	// std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
-	// std::string str_cur_time(std::ctime(&cur_time));
-	// std::string cur_time_second = str_cur_time.substr(11,8);
-	// msg << "[" << cur_time_second << "]: ";
+    std::stringstream msg; 
 
     int nof_64qam = 0;
     int nof_256qam = 0;
@@ -1175,7 +1157,6 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
         }
     }
 
-    // BWS
     msg << "[256Tracking] Total: ";
     msg << std::right << std::setw(6) << nof_64qam;
     msg << " RNTIs are 64QAM table, ";
@@ -1185,8 +1166,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
     msg << " RNTIs are Unknown ";
     msg << std::endl; 
     msg << std::endl;
-    //printf("[256Tracking] Total: %d RNTIs are 64QAM table, %d RNTIs are 256QAM table, %d RNTIs are Unknown \n\n",
-    //       nof_64qam, nof_256qam, nof_unknown);
+
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
@@ -1202,7 +1182,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
 
-    std::stringstream msg; // BWS
+    std::stringstream msg; 
 
     int nof_64qam = 0;
     int nof_256qam = 0;
@@ -1219,7 +1199,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
-	if(str_cur_time.length()>=(11+8)){
+    if(str_cur_time.length()>=(11+8)){
         cur_time_second = str_cur_time.substr(11,8);
     }else{
         cur_time_second = "";
@@ -1406,9 +1386,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     msg << " RNTIs are Unknown ";
     msg << std::endl; 
     msg << std::endl;
-    // BWS
-    //printf("[256Tracking] Total: %d RNTIs are 64QAM table, %d RNTIs are 256QAM table, %d RNTIs are Unknown \n\n",
-    //       nof_64qam, nof_256qam, nof_unknown);
+
     if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
 		std::cout << msg.str();
 	}
@@ -1629,7 +1607,7 @@ void MCSTracking::update_ue_config_rnti(uint16_t rnti, ltesniffer_ue_spec_config
             ul_iter->second.ue_spec_config = ue_spec_config;
         }
     }
-    else if (sniffer_mode == DL_UL_MODE) // BWS
+    else if (sniffer_mode == DL_UL_MODE) 
     {
         // Downlink
         std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
@@ -1667,7 +1645,7 @@ ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti, int D
     ltesniffer_ue_spec_config_t ue_spec_config = {};
     ue_spec_config = default_ue_spec_config;
     ue_spec_config.has_ue_config = false;
-    if (DL_or_UL == 0) // BWS
+    if (DL_or_UL == 0) 
     {
         std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
         dl_iter = tracking_database_dl_mode.find(rnti);
@@ -1680,7 +1658,7 @@ ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti, int D
             // nothing
         }
     }
-    else if (DL_or_UL == 1) // BWS
+    else if (DL_or_UL == 1) 
     {
         std::map<uint16_t, ul_sniffer_tracking_t>::iterator ul_iter;
         ul_iter = tracking_database_ul_mode.find(rnti);

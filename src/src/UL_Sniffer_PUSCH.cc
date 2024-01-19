@@ -275,8 +275,8 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
             tmp_sum += sf_power->getRBPowerUL().at(ul_cfg.pusch.grant.n_prb[0] + rb_idx);
         }
         falcon_signal_power = tmp_sum / ul_cfg.pusch.grant.L_prb;
-        srsran_dci_format_t cur_format = decoding_mem.format; // BWS
-		std::string dci_fm = dci_format_ul(cur_format); // BWS
+        srsran_dci_format_t cur_format = decoding_mem.format; 
+		std::string dci_fm = dci_format_ul(cur_format); 
         print_debug(decoding_mem, dci_fm, info, modulation_mode, signal_power, enb_ul.chest_res.noise_estimate_dbm, falcon_signal_power);
     }
 
@@ -428,18 +428,18 @@ void PUSCH_Decoder::decode()
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                 ul_cfg.pusch.enable_64qam = false; // check here for 64/16QAM
                 ul_cfg.pusch.meas_ta_en = true;    // enable ta measurement
-                // BWS start
+                // start
                 bool set_grant = false;  
                 if(valid_ul_grant == SRSRAN_SUCCESS){
-                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant; //bws        
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;       
                     set_grant = true;
                 }
                 if((set_grant == false) && (valid_ul_grant_256 == SRSRAN_SUCCESS)){
-                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256; //bws     
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;      
                     set_grant = true;   
                 } 
                 if(set_grant == false){continue;}
-                // BWS end
+                // end
                 int mcs_idx = ul_cfg.pusch.grant.tb.mcs_idx;
                 pusch_res.crc = false;
                 /*Get Number of ack which was calculated in Subframe worker last 4 ms*/
@@ -447,7 +447,7 @@ void PUSCH_Decoder::decode()
                 // ul_cfg.pusch.uci_cfg.cqi.rank_is_not_one            = (decoding_mem.nof_ack == 2)?true:false;
 
                 /*get UE-specific configuration from database*/
-                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti, 1); // BWS
+                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti, 1); 
                 ul_cfg.pusch.uci_cfg.cqi.type = ue_config.cqi_config.type;
                 ul_cfg.pusch.uci_offset = ue_config.uci_config;
                 /*If eNB requests for Aperiodic CSI report*/
@@ -733,7 +733,7 @@ void PUSCH_Decoder::work_prach()
         }
     }
 }
-// BWS FIO FILE_IDX_UL_DCI 
+// FIO FILE_IDX_UL_DCI 
 void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem, 
                                     std::string format,
                                     std::string offset_name, 
@@ -748,7 +748,7 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
 	std::string cur_time_second;
-	if(str_cur_time.length()>=(11+8)){
+    if(str_cur_time.length()>=(11+8)){
         cur_time_second = str_cur_time.substr(11,8);
     }else{
         cur_time_second = "";
@@ -969,13 +969,13 @@ std::string convert_msg_name(int msg)
 }
 void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string value, int msg)
 {
-    std::stringstream msg_api; // BWS
+    std::stringstream msg_api; 
     
 	auto now = std::chrono::system_clock::now();
 	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string str_cur_time(std::ctime(&cur_time));
     std::string cur_time_second;
-	if(str_cur_time.length()>=(11+8)){
+    if(str_cur_time.length()>=(11+8)){
         cur_time_second = str_cur_time.substr(11,8);
     }else{
         cur_time_second = "";
@@ -1006,7 +1006,7 @@ int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
     {
         return SRSRAN_ERROR;
     }
-    if(decoding_mem.ran_ul_grant==nullptr) //bws
+    if(decoding_mem.ran_ul_grant==nullptr) 
     {
         return SRSRAN_ERROR;
     }
@@ -1036,7 +1036,7 @@ int PUSCH_Decoder::investigate_valid_ul_grant_256(DCI_UL &decoding_mem)
     {
         return SRSRAN_ERROR;
     }
-    if(decoding_mem.ran_ul_grant_256==nullptr) //bws
+    if(decoding_mem.ran_ul_grant_256==nullptr) 
     {
         return SRSRAN_ERROR;
     }

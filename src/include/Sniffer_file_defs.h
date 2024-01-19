@@ -1,4 +1,3 @@
-// BWS
 #define FILE_IDX_API 0
 #define FILE_IDX_DL 1
 #define FILE_IDX_DL_DCI 2
