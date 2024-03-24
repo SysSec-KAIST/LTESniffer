@@ -23,6 +23,10 @@
 #include "srsran/common/gen_mch_tables.h"
 #include "srsran/phy/io/filesink.h"
 
+#include "include/Sniffer_file_defs.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifdef __cplusplus
 }
 #undef I // Fix complex.h #define I nastiness when using C++
@@ -41,7 +45,15 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   harq_mode(args.harq_mode),
   sniffer_mode(args.sniffer_mode),
   ulsche(args.target_rnti, &ul_harq, args.en_debug),
-  api_mode(args.api_mode)
+  api_mode(args.api_mode),
+  apiwriter(), // need to declare
+  dlwriter(), // need to declare
+  dldciwriter(), // need to declare
+  ulwriter(), // need to declare
+  uldciwriter(), // need to declare
+  rarwriter(), // need to declare
+  otherwriter(), // need to declare
+  filewriter_objs({&apiwriter, &dlwriter, &dldciwriter, &ulwriter, &uldciwriter, &rarwriter, &otherwriter}) // need pointers to persist
 {
   /*create pcap writer and name of output file*/    
   auto now = std::chrono::system_clock::now();
@@ -56,8 +68,22 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
       *it = '.';
     }
   }
-  std::cout << str_cur_time << std::endl;
-  // std::string pcap_file_name = "ul_pcap_" + str_cur_time + "pcap";
+
+  std::string stat_folder = "/home/stats/";
+  filewriter_objs[FILE_IDX_CONTROL]->open((stat_folder + "LETTUCE_control_" + str_cur_time + "ansi")); 
+  std::stringstream control_msg_contruct;
+
+  control_msg_contruct << "\nLTESniffer_Core: Starting...\n\n";
+  control_msg_contruct << str_cur_time << std::endl;
+
+  std::string mode_str = "NA";
+  if(sniffer_mode==0){mode_str = "DL only";}
+  else if(sniffer_mode==1){mode_str = "UL only";}
+  else if(sniffer_mode==2){mode_str = "DL & UL";}
+  control_msg_contruct << "Sniffer Mode: " << mode_str << std::endl; 
+
+  // File Writers
+    // std::string pcap_file_name = "ul_pcap_" + str_cur_time + "pcap";
   std::string pcap_file_name;
   std::string pcap_file_name_api = "api_collector.pcap";
   if (sniffer_mode == DL_MODE){
@@ -66,10 +92,35 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
     pcap_file_name = "ltesniffer_ul_mode.pcap";
   }
   pcapwriter.open(pcap_file_name, pcap_file_name_api, 0);
+
+  struct stat st = {0};
+  if (stat(stat_folder.c_str(), &st) == -1) {
+      mkdir(stat_folder.c_str(), 0700);
+  }
+
+  std::string error_filename = stat_folder + "LETTUCE_stderr_" + str_cur_time + "ansi";
+  errfile = freopen(error_filename.c_str(),"w",stderr);
+
+  std::string out_filename = stat_folder + "LETTUCE_stdout_" + str_cur_time + "ansi";
+  // this will do the same format on command line with tee 
+  //    date +"LETTUCE_stdout_%a_%b__%-d_%H.%M.%S_%Y.ansi"
+  //    outfile = freopen(out_filename.c_str(),"w",stdout);
+
+  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); 
+  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); 
+
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
   /*Set multi offset in ULSchedule*/
-  ulsche.set_multi_offset(args.sniffer_mode);
+  int multi_offset_toggle = 0; 
+  if((sniffer_mode == UL_MODE) || (sniffer_mode == DL_UL_MODE)) {
+    multi_offset_toggle = 1;
+  }
+  ulsche.set_multi_offset(multi_offset_toggle); 
   /*Create PHY*/
   phy = new Phy(args.rf_nof_rx_ant,
                 args.nof_sniffer_thread,
@@ -79,6 +130,7 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
                 args.dci_format_split_ratio,
                 args.rnti_histogram_threshold,
                 &pcapwriter,
+                &filewriter_objs,
                 &mcs_tracking,
                 &harq,
                 args.mcs_tracking_mode,
@@ -102,6 +154,8 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
   for (int i = 0; i<100; i++){
     ta_buffer.ta_last_sample[i] = 0;
   }
+
+  write_file_and_console(control_msg_contruct.str(), filewriter_objs[FILE_IDX_CONTROL]);
 }
 
 bool LTESniffer_Core::run(){
@@ -116,6 +170,8 @@ bool LTESniffer_Core::run(){
   srsran_pdsch_cfg_t pdsch_cfg;
   srsran_ue_sync_t   ue_sync;
 
+  std::stringstream control_msg;
+
 #ifndef DISABLE_RF
   srsran_rf_t rf;             // to open RF devices
 #endif
@@ -124,6 +180,7 @@ bool LTESniffer_Core::run(){
   float search_cell_cfo = 0;  // freg. offset
   uint32_t sfn = 0;           // system frame number
   uint32_t skip_cnt = 0;      // number of skipped subframe
+  uint32_t rx_fail_cnt = 0;   // number of failed receive sample errors from UHD
   uint32_t total_sf = 0;
   uint32_t skip_last_1s = 0;
   uint16_t nof_lost_sync = 0;
@@ -150,20 +207,24 @@ bool LTESniffer_Core::run(){
   /* If RF mode (not file mode)*/
 #ifndef DISABLE_RF
   if (args.input_file_name == "") {
-    printf("Opening RF device with %d RX antennas...\n", args.rf_nof_rx_ant);
+    //printf("Opening RF device with %d RX antennas...\n", args.rf_nof_rx_ant);
+    control_msg << "Opening RF device with " << args.rf_nof_rx_ant << " RX antennas...\n";
     char rfArgsCStr[1024];
     strncpy(rfArgsCStr, args.rf_args.c_str(), 1024);
     if (srsran_rf_open_multi(&rf, rfArgsCStr, args.rf_nof_rx_ant)) {
       fprintf(stderr, "Error opening rf\n");
+      control_msg << "Error opening rf\n";
       exit(-1);
     }
     /* Set receiver gain */
     if (args.rf_gain > 0) {
       srsran_rf_set_rx_gain(&rf, args.rf_gain);
     } else {
-      printf("Starting AGC thread...\n");
+      //printf("Starting AGC thread...\n");
+      control_msg << "Starting AGC thread...\n";
       if (srsran_rf_start_gain_thread(&rf, false)) {
         ERROR("Error opening rf");
+        control_msg << "Error opening rf\n";
         exit(-1);
       }
       srsran_rf_set_rx_gain(&rf, srsran_rf_get_rx_gain(&rf));
@@ -172,35 +233,62 @@ bool LTESniffer_Core::run(){
 
     /* set receiver frequency */
     if (sniffer_mode == UL_MODE && args.ul_freq != 0){
-      printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
+      control_msg << "Tunning DL receiver to " << std::fixed << std::setprecision(3) << ((args.rf_freq + args.file_offset_freq) / 1000000) << std::endl;
+      //printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
       if (srsran_rf_set_rx_freq(&rf, 0, args.rf_freq + args.file_offset_freq)) {
         ///ERROR("Tunning DL Freq failed\n");
       }
       /*Uplink freg*/
-      printf("Tunning UL receiver to %.3f MHz\n", (double) (args.ul_freq / 1000000));
+      control_msg << "Tunning UL receiver to " << std::fixed << std::setprecision(3) << ((double) (args.ul_freq / 1000000)) << std::endl;
+      //printf("Tunning UL receiver to %.3f MHz\n", (double) (args.ul_freq / 1000000));
       if (srsran_rf_set_rx_freq(&rf, 1, args.ul_freq )){
         //ERROR("Tunning UL Freq failed \n");
       }
     } else if (sniffer_mode == UL_MODE && args.ul_freq == 0){
-      ERROR("Uplink Frequency must be defined in the UL Sniffer Mode \n");
+      control_msg << "Uplink Frequency must be defined in the UL Sniffer Mode \n";
+      ERROR("Uplink Frequency must be defined in the UL Sniffer Mode");
     } else if (sniffer_mode == DL_MODE && args.ul_freq == 0){
-      printf("Tunning receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
+      control_msg << "Tunning DL receiver to " << std::fixed << std::setprecision(3) << ((args.rf_freq + args.file_offset_freq) / 1000000) << std::endl;
+      //printf("Tunning receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
       srsran_rf_set_rx_freq(&rf, args.rf_nof_rx_ant, args.rf_freq + args.file_offset_freq);
     } else if (sniffer_mode == DL_MODE && args.ul_freq != 0){
-        ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode \n");
+      control_msg << "Uplink Frequency must be 0 in the DL Sniffer Mode \n";
+      ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode");
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq != 0){ 
+      control_msg << "Tunning DL receiver to " << std::fixed << std::setprecision(3) << ((args.rf_freq + args.file_offset_freq) / 1000000) << std::endl;
+      //printf("Tunning DL receiver to %.3f MHz\n", (args.rf_freq + args.file_offset_freq) / 1000000);
+      if (srsran_rf_set_rx_freq(&rf, 0, args.rf_freq + args.file_offset_freq)) {
+        ///ERROR("Tunning DL Freq failed\n");
+      }
+      /*Uplink freg*/
+      control_msg << "Tunning UL receiver to " << std::fixed << std::setprecision(3) << ((double) (args.ul_freq / 1000000)) << std::endl;
+      //printf("Tunning UL receiver to %.3f MHz\n", (double) (args.ul_freq / 1000000));
+      if (srsran_rf_set_rx_freq(&rf, 1, args.ul_freq )){
+        //ERROR("Tunning UL Freq failed \n");
+      }
+    } else if (sniffer_mode == DL_UL_MODE && args.ul_freq == 0){ 
+      control_msg << "Uplink Frequency must be defined in the UL Sniffer Mode \n";
+      ERROR("Uplink Frequency must be defined in the UL Sniffer Mode");
     }
+    write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+    control_msg.str(std::string());
 
     if (args.cell_search){
       uint32_t ntrial = 0;
       do {
+        control_msg << "Searching for cell...\n";
         ret = rf_search_and_decode_mib(
             &rf, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo);
         if (ret < 0) {
+          control_msg << "Error searching for cell \n";
           ERROR("Error searching for cell");
           exit(-1);
         } else if (ret == 0 && !go_exit) {
-          printf("Cell not found after %d trials. Trying again (Press Ctrl+C to exit)\n", ntrial++);
+          control_msg << "Cell not found after " << ntrial++ << " trials. Trying again (Press Ctrl+C to exit)\n"; 
+          //printf("Cell not found after %d trials. Trying again (Press Ctrl+C to exit)\n", ntrial++);
         }
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
       } while (ret == 0 && !go_exit);
     } else{
       //set up cell manually
@@ -221,16 +309,21 @@ bool LTESniffer_Core::run(){
     /* set sampling frequency */
     int srate = srsran_sampling_freq_hz(cell.nof_prb);
     if (srate != -1) {
-      printf("Setting sampling rate %.2f MHz\n", (float)srate / 1000000);
+      control_msg << "Setting sampling rate " << std::fixed << std::setprecision(2) << ((float)srate / 1000000) << " MHz\n";
+      //printf("Setting sampling rate %.2f MHz\n", (float)srate / 1000000);
       float srate_rf = srsran_rf_set_rx_srate(&rf, (double)srate);
       if (srate_rf != srate) {
+        control_msg << "Could not set sampling rate\n";
         ERROR("Could not set sampling rate");
         exit(-1);
       }
     } else {
+      control_msg << "Invalid number of PRB " << cell.nof_prb << std::endl;
       ERROR("Invalid number of PRB %d", cell.nof_prb);
       exit(-1);
     }
+    write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+    control_msg.str(std::string());
 
     INFO("Stopping RF and flushing buffer...\r");
   }
@@ -255,7 +348,10 @@ bool LTESniffer_Core::run(){
                                        args.file_offset_time,
                                        args.file_offset_freq,
                                        args.rf_nof_rx_ant)) { //args.rf_nof_rx_ant
+      control_msg << "Error initiating ue_sync" << std::endl;
       ERROR("Error initiating ue_sync");
+      write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+      control_msg.str(std::string());
       exit(-1);
     }
     delete[] tmp_filename;
@@ -266,7 +362,10 @@ bool LTESniffer_Core::run(){
     int decimate = 0;
     if (args.decimate) {
       if (args.decimate > 4 || args.decimate < 0) {
-        printf("Invalid decimation factor, setting to 1 \n");
+        control_msg << "Invalid decimation factor, setting to 1 \n";
+        //printf("Invalid decimation factor, setting to 1 \n");
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
       } else {
         decimate = args.decimate;
       }
@@ -279,10 +378,16 @@ bool LTESniffer_Core::run(){
                                         (void*)&rf,
                                         decimate)) {
       ERROR("Error initiating ue_sync");
+      control_msg << "Error initiating ue_sync" << std::endl;
+      write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+      control_msg.str(std::string());
       exit(-1);
     }
     if (srsran_ue_sync_set_cell(&ue_sync, cell)) {
       ERROR("Error initiating ue_sync");
+      control_msg << "Error initiating ue_sync" << std::endl;
+      write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+      control_msg.str(std::string());
       exit(-1);
     }
 #endif
@@ -302,12 +407,18 @@ bool LTESniffer_Core::run(){
   srsran_ue_mib_t ue_mib;
   if (srsran_ue_mib_init(&ue_mib, cur_buffer[0], cell.nof_prb)) {
     ERROR("Error initaiting UE MIB decoder");
+    control_msg << "Error initaiting UE MIB decoder" << std::endl;
     exit(-1);
   }
   if (srsran_ue_mib_set_cell(&ue_mib, cell)) {
     ERROR("Error initaiting UE MIB decoder");
+    control_msg << "Error initaiting UE MIB decoder" << std::endl;
     exit(-1);
   }
+  write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+  control_msg.str(std::string());
+
+  srsran_sync_set_threshold(&ue_sync.sfind, 2.0);
 
   // Disable CP based CFO estimation during find
   ue_sync.cfo_current_value       = search_cell_cfo / 15000;
@@ -367,7 +478,17 @@ bool LTESniffer_Core::run(){
       if (args.input_file_name != ""){
         std::cout << "Finish reading from file" << std::endl;
       }
-      ERROR("Error calling srsran_ue_sync_work()");
+      rx_fail_cnt++;
+      ERROR("Error calling srsran_ue_sync_work() cnt: %d", rx_fail_cnt);
+      control_msg << "Error calling srsran_ue_sync_work() cnt: " << to_string(rx_fail_cnt) << std::endl;
+      if(rx_fail_cnt>UHD_FAIL_LIMIT){
+        control_msg << "EXITING because of UHD Error Limit Reached: " << to_string(UHD_FAIL_LIMIT) << std::endl;
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
+        return EXIT_FAILURE;
+      }
+      write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+      control_msg.str(std::string());
     }
     // std:: cout << "CFO = " << srsran_ue_sync_get_cfo(&ue_sync) << std::endl;
 #ifdef CORRECT_SAMPLE_OFFSET
@@ -386,11 +507,18 @@ bool LTESniffer_Core::run(){
             n = srsran_ue_mib_decode(&ue_mib, bch_payload, NULL, &sfn_offset);
             if (n < 0) {
               ERROR("Error decoding UE MIB");
+              control_msg << "Error decoding UE MIB" << std::endl;
+              write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+              control_msg.str(std::string());
               exit(-1);
             } else if (n == SRSRAN_UE_MIB_FOUND) {
               srsran_pbch_mib_unpack(bch_payload, &cell, &sfn);
-              srsran_cell_fprint(stdout, &cell, sfn);
-              printf("Decoded MIB. SFN: %d, offset: %d\n", sfn, sfn_offset);
+              cell_print(filewriter_objs[FILE_IDX_CONTROL], &cell, sfn);
+              //srsran_cell_fprint(stdout, &cell, sfn);
+              control_msg << "Decoded MIB. SFN: " << sfn << ", offset: " << sfn_offset << "\n";
+              //printf("Decoded MIB. SFN: %d, offset: %d\n", sfn, sfn_offset);
+              write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+              control_msg.str(std::string());
               sfn   = (sfn + sfn_offset) % 1024;
               state = DECODE_PDSCH;
 
@@ -420,7 +548,8 @@ bool LTESniffer_Core::run(){
           break;
         case DECODE_PDSCH:
           if ((mcs_tracking.get_nof_api_msg()%30) == 0 && api_mode > -1){
-            print_api_header();
+            print_api_header(filewriter_objs[FILE_IDX_API]);
+            //std::cout << std::hash<std::thread::id>{}(std::this_thread::get_id()) << std::endl;
             mcs_tracking.increase_nof_api_msg();
             if (mcs_tracking.get_nof_api_msg() > 30){
               mcs_tracking.reset_nof_api_msg();
@@ -460,23 +589,42 @@ bool LTESniffer_Core::run(){
         sfn = 0;
       }
       total_sf++;
-      if ((total_sf%1000)==0 && (api_mode == -1)){
+
+      if ((total_sf%1000)==0){// && (api_mode == -1)){
         auto now = std::chrono::system_clock::now();
         std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
         std::string str_cur_time(std::ctime(&cur_time));
-        std::string cur_time_second = str_cur_time.substr(11,8);
-        std::cout << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
+        std::string cur_time_second;
+        if(str_cur_time.length()>=(11+8)){
+          cur_time_second = str_cur_time.substr(11,8);
+        }else{
+          cur_time_second = "";
+        }
+
+        control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
+        control_msg << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
+        control_msg << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
+
         mcs_tracking_timer++;
         update_rnti_timer ++;
         skip_last_1s = 0;
       }
       if (update_rnti_timer == mcs_tracking.get_interval()){
+        //std::cout << "update tables" << std::endl;
         switch (sniffer_mode)
         {
         case DL_MODE:
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           break;
         case UL_MODE:
+          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
+          break;
+        case DL_UL_MODE: 
+          // Downlink
+          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
+          // Uplink
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           break;
         default:
@@ -486,16 +634,27 @@ bool LTESniffer_Core::run(){
       }
       /* Update 256tracking and harq database, delete the inactive RNTIs*/
       if (mcs_tracking_timer == 10){
+        //std::cout << "print tables" << std::endl;
         switch (sniffer_mode)
         {
         case DL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_dl();}
+          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], api_mode);
           if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
           if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
           mcs_tracking_timer = 0;
           break;
         case UL_MODE:
-          if (api_mode == -1) {mcs_tracking.print_database_ul();}
+          mcs_tracking.print_database_ul(filewriter_objs[FILE_IDX_UL], api_mode);
+          if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
+          mcs_tracking_timer = 0;
+          break;
+        case DL_UL_MODE: 
+          // Downlink
+          mcs_tracking.print_database_dl(filewriter_objs[FILE_IDX_DL], 1); // force DL to not print in DL/UL mode
+          if (mcs_tracking_mode && args.target_rnti == 0){ mcs_tracking.update_database_dl(); }
+          if (harq_mode && args.target_rnti == 0){ harq.updateHARQDatabase(); }
+          // Uplink
+          mcs_tracking.print_database_ul(filewriter_objs[FILE_IDX_UL], api_mode);
           if (mcs_tracking_mode){ mcs_tracking.update_database_ul(); }
           mcs_tracking_timer = 0;
           break;
@@ -504,24 +663,40 @@ bool LTESniffer_Core::run(){
         }
       }
     } else if(ret == 0){ //get buffer wrong or out of sync
+      //std::cout << "issues" << std::endl;
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
         state = DECODE_MIB;
         if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers()[0], cell.nof_prb)) {
           ERROR("Error initaiting UE MIB decoder");
+          control_msg << "Error initaiting UE MIB decoder" << std::endl;
           exit(-1);
         }
         if (srsran_ue_mib_set_cell(&ue_mib, cell)) {
+          control_msg << "Error initaiting UE MIB decoder" << std::endl;
           ERROR("Error initaiting UE MIB decoder");
           exit(-1);
         }
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
         srsran_pbch_decode_reset(&ue_mib.pbch);
         nof_lost_sync = 0;
       }
+      
+      if(srsran_sync_get_peak_value(&ue_sync.sfind) > srsran_sync_get_threshold(&ue_sync.sfind)){
+        control_msg << "Found PSS... NID2: "  << cell.id % 3 <<
+                ", Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
+                ", Threshold: " << srsran_sync_get_threshold(&ue_sync.sfind) <<
+                ", FrameCnt: " << ue_sync.frame_total_cnt <<
+                " State: " << ue_sync.state << endl;
+        control_msg << "Missed PSS Attempts: " << nof_lost_sync << endl;
+        write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+        control_msg.str(std::string());
+      }
       nof_lost_sync++;
-      cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
-              ", FrameCnt: " << ue_sync.frame_total_cnt <<
-              " State: " << ue_sync.state << endl;
+      // cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
+      //         ", FrameCnt: " << ue_sync.frame_total_cnt <<
+      //         " State: " << ue_sync.state << endl;
     }
     sf_cnt++;
 
@@ -533,11 +708,19 @@ bool LTESniffer_Core::run(){
     {
     case DL_MODE:
       mcs_tracking.merge_all_database_dl();
-      if (api_mode == -1) {mcs_tracking.print_all_database_dl(); }
+      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); 
       break;
     case UL_MODE:
       mcs_tracking.merge_all_database_ul();
-      if (api_mode == -1) {mcs_tracking.print_all_database_ul(); }
+      mcs_tracking.print_all_database_ul(filewriter_objs[FILE_IDX_UL], api_mode); 
+      break;
+    case DL_UL_MODE: 
+      // Downlink
+      mcs_tracking.merge_all_database_dl();
+      mcs_tracking.print_all_database_dl(filewriter_objs[FILE_IDX_DL], api_mode); // allow final DL table in DL/UL mode
+      // Uplink
+      mcs_tracking.merge_all_database_ul();
+      mcs_tracking.print_all_database_ul(filewriter_objs[FILE_IDX_UL], api_mode); 
       break;
     default:
       break;
@@ -546,7 +729,7 @@ bool LTESniffer_Core::run(){
 
   phy->joinPending();
 
-  std::cout << "Destroyed Phy" << std::endl;
+  control_msg << "Destroyed Phy" << std::endl;
   if (args.input_file_name == ""){
     srsran_rf_close(&rf);
     //srsran_ue_dl_free(falcon_ue_dl.q);
@@ -554,13 +737,16 @@ bool LTESniffer_Core::run(){
     srsran_ue_mib_free(&ue_mib);
   }
   //common->getRNTIManager().printActiveSet();
-  cout << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
+  control_msg << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
   //phy->getCommon().getRNTIManager().printActiveSet();
   //rnti_manager_print_active_set(falcon_ue_dl.rnti_manager);
 
   phy->getCommon().printStats();
-  cout << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
+  control_msg << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
   
+  write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
+  control_msg.str(std::string());
+
   /* Print statistic of 256tracking*/
   // if (mcs_tracking_mode){ mcs_tracking.print_database_ul(); }
 
@@ -570,7 +756,8 @@ bool LTESniffer_Core::run(){
 }
 
 void LTESniffer_Core::stop() {
-  cout << "LTESniffer_Core: Exiting..." << endl;
+  std::string mystring = "\nLTESniffer_Core: Exiting...\n";
+  write_file_and_console(mystring, filewriter_objs[FILE_IDX_CONTROL]);
   go_exit = true;
 }
 
@@ -580,6 +767,17 @@ void LTESniffer_Core::handleSignal() {
 
 LTESniffer_Core::~LTESniffer_Core(){
   pcapwriter.close();
+  errfile = freopen("/dev/tty","r",stderr);
+  fclose (stderr);
+  //outfile = freopen("/dev/tty","r",stdout);
+  //fclose (stdout);
+  filewriter_objs[FILE_IDX_API]->close(); 
+  filewriter_objs[FILE_IDX_DL]->close(); 
+  filewriter_objs[FILE_IDX_DL_DCI]->close(); 
+  filewriter_objs[FILE_IDX_UL]->close(); 
+  filewriter_objs[FILE_IDX_UL_DCI]->close(); 
+  //filewriter_objs[FILE_IDX_RAR]->close(); 
+  filewriter_objs[FILE_IDX_CONTROL]->close(); 
   // delete        harq_map;
   // harq_map    = nullptr;
   // delete        phy;
@@ -620,19 +818,76 @@ void LTESniffer_Core::setRNTIThreshold(int val){
   if(phy){phy->getCommon().getRNTIManager().setHistogramThreshold(val);}
 }
 
-void LTESniffer_Core::print_api_header(){
+void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
+  std::stringstream msg_api;
+
   for (int i = 0; i < 90; i++){
-      std::cout << "-";
+      msg_api << "-";
   }
-  std::cout << std::endl;
-  std::cout << std::left << std::setw(10) <<  "SF";
-  std::cout << std::left << std::setw(26) <<  "Detected Identity";
-  std::cout << std::left << std::setw(17) <<  "Value";
-  std::cout << std::left << std::setw(11) <<  "RNTI";  
-  std::cout << std::left << std::setw(25) <<  "From Message";
-  std::cout << std::endl;
+  msg_api << std::endl;
+
+  auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+    cur_time_second = str_cur_time.substr(11,8);
+  }else{
+    cur_time_second = "";
+  }
+	msg_api << "[" << cur_time_second << "]: ";
+
+  msg_api << std::left << std::setw(10) <<  "SF";
+  msg_api << std::left << std::setw(26) <<  "Detected Identity";
+  msg_api << std::left << std::setw(17) <<  "Value";
+  msg_api << std::left << std::setw(11) <<  "RNTI";  
+  msg_api << std::left << std::setw(25) <<  "From Message";
+  msg_api << std::endl;
   for (int i = 0; i < 90; i++){
-      std::cout << "-";
+      msg_api << "-";
   }
-  std::cout << std::endl;
+  msg_api << std::endl;
+
+  if(DEBUG_SEC_PRINT==1){
+		std::cout << msg_api.str();
+	}
+  if(FILE_WRITE==1){
+		filewriter_obj->write_stats(msg_api.str());
+	}
+}
+
+void write_file_and_console(std::string mystring, LTESniffer_stat_writer* filewriter_obj){
+  filewriter_obj->write_stats(mystring);
+  std::cout << mystring;
+}
+
+void cell_print(LTESniffer_stat_writer* filewriter_obj, srsran_cell_t* cell, uint32_t sfn)
+{
+  std:string mystring = "";
+  mystring = mystring + " - Type:            " + (cell->frame_type == SRSRAN_FDD ? "FDD" : "TDD") + "\n";
+  mystring = mystring + " - PCI:             " + std::to_string(cell->id) + "\n";
+  mystring = mystring + " - Nof ports:       " + std::to_string(cell->nof_ports) + "\n";
+  mystring = mystring + " - CP:              " + (srsran_cp_string(cell->cp)) + "\n";
+  mystring = mystring + " - PRB:             " + std::to_string(cell->nof_prb) + "\n";
+  mystring = mystring + " - PHICH Length:    " + (cell->phich_length == SRSRAN_PHICH_EXT ? "Extended" : "Normal") + "\n";
+  mystring = mystring + " - PHICH Resources: ";
+  switch (cell->phich_resources) {
+    case SRSRAN_PHICH_R_1_6:
+      mystring = mystring + "1/6";
+      break;
+    case SRSRAN_PHICH_R_1_2:
+      mystring = mystring + "1/2";
+      break;
+    case SRSRAN_PHICH_R_1:
+      mystring = mystring + "1";
+      break;
+    case SRSRAN_PHICH_R_2:
+      mystring = mystring + "2";
+      break;
+  }
+  mystring = mystring + "\n";
+  mystring = mystring + " - SFN:             " + std::to_string(sfn) + "\n";
+
+  filewriter_obj->write_stats(mystring);
+  std::cout << mystring;
 }

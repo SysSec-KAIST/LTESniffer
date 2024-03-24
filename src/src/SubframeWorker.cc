@@ -13,6 +13,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                PhyCommon &common,
                                DCIMetaFormats &metaFormats,
                                LTESniffer_pcap_writer *pcapwriter,
+                               std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                                MCSTracking *mcs_tracking,
                                HARQ *harq,
                                int mcs_tracking_mode,
@@ -28,6 +29,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                                    updateMetaFormats(false),
                                                    stats(),
                                                    pcapwriter(pcapwriter),
+                                                   filewriter_objs(filewriter_objs),
                                                    mcs_tracking(mcs_tracking),
                                                    harq(harq),
                                                    harq_mode(harq_mode),
@@ -51,7 +53,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     /* Config for Downlink Sniffing function*/
     srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, common.nof_rx_antennas);
     /* PDSCH decoder (Downlink)*/
-    pdschdecoder = new PDSCH_Decoder(idx, pcapwriter, mcs_tracking, common.getRNTIManager(), harq, mcs_tracking_mode, harq_mode, common.nof_rx_antennas);
+    pdschdecoder = new PDSCH_Decoder(idx, pcapwriter, filewriter_objs, mcs_tracking, common.getRNTIManager(), harq, mcs_tracking_mode, harq_mode, common.nof_rx_antennas);
     break;
   case UL_MODE:
     /* Config for Downlink Sniffing function*/
@@ -59,6 +61,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
     /* PDSCH decoder (Downlink)*/
     pdschdecoder = new PDSCH_Decoder(idx,
                                      pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      common.getRNTIManager(),
                                      harq,
@@ -73,6 +76,39 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                      sfb.sf_buffer_offset,
                                      ul_cfg,
                                      pcapwriter,
+                                     filewriter_objs, 
+                                     mcs_tracking,
+                                     mcs_tracking->get_debug_mode());
+    /*Uplink enb init*/
+    if (srsran_enb_ul_init(&enb_ul, sfb.sf_buffer[1], 110))
+    { // 110 = max PRB
+      ERROR("Error initiating ENB UL");
+      return;
+    }
+    break;
+  case DL_UL_MODE: 
+    // Downlink/Uplink
+    /* Config for Downlink Sniffing function*/
+    srsran_ue_dl_init(falcon_ue_dl.q, sfb.sf_buffer, max_prb, 1); // only 1 antenna for DL in the UL Sniffer Mode
+    /* PDSCH decoder (Downlink)*/
+    pdschdecoder = new PDSCH_Decoder(idx,
+                                     pcapwriter,
+                                     filewriter_objs, 
+                                     mcs_tracking,
+                                     common.getRNTIManager(),
+                                     harq,
+                                     mcs_tracking_mode,
+                                     harq_mode,
+                                     common.nof_rx_antennas);
+    /* PUSCH decoder (Uplink)*/
+    puschdecoder = new PUSCH_Decoder(enb_ul,
+                                     ul_sf,
+                                     ulsche,
+                                     sfb.sf_buffer,
+                                     sfb.sf_buffer_offset,
+                                     ul_cfg,
+                                     pcapwriter,
+                                     filewriter_objs, 
                                      mcs_tracking,
                                      mcs_tracking->get_debug_mode());
     /*Uplink enb init*/
@@ -188,6 +224,22 @@ void SubframeWorker::work()
     {                                        // only decode when SNR > 5 dB
       stats += dciSearch.getStats();         // worker-specific statistics
       common.addStats(dciSearch.getStats()); // common statistics
+      subframeInfo.getSubframePower().computePower(enb_ul.sf_symbols);
+      run_ul_mode(subframeInfo, tti);
+    }
+    else
+    {
+      // printf("[SIGNAL] Bad signal quality... \n");
+    }
+    break;
+  case DL_UL_MODE: 
+    dciSearch.prepareDCISearch(); // set single antenna for DL in the UL Sniffer mode
+    snr_ret = dciSearch.search();
+    if (snr_ret == SRSRAN_SUCCESS)
+    {                                        // only decode when SNR > 5 dB
+      stats += dciSearch.getStats();         // worker-specific statistics
+      common.addStats(dciSearch.getStats()); // common statistics
+      run_dl_mode(subframeInfo);
       subframeInfo.getSubframePower().computePower(enb_ul.sf_symbols);
       run_ul_mode(subframeInfo, tti);
     }

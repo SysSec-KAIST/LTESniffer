@@ -21,6 +21,7 @@
 #endif
 
 #include "falcon/phy/falcon_phch/falcon_dci.h"
+#include "FileWriter.h" 
 
 #ifdef __cplusplus
 }
@@ -107,9 +108,9 @@ public:
     void update_RNTI_ul(uint16_t RNTI, ul_sniffer_mod_tracking_t mcs_mod);
     void update_database_ul();
     int  nof_RNTI_member_ul(){ return tracking_database_ul_mode.size();}
-    void print_database_ul();
+    void print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode);
     void merge_all_database_ul();
-    void print_all_database_ul();
+    void print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode); 
     void update_statistic_ul(uint16_t RNTI, bool success, DCI_UL &decoding_mem, float snr, float ta);
 
     /*DL 256QAM/64QAM tracking implementation*/
@@ -118,9 +119,9 @@ public:
     void update_RNTI_dl(uint16_t RNTI, dl_sniffer_mcs_table_t mcs_table);
     void update_database_dl();
     int  nof_RNTI_member_dl(){ return tracking_database_dl_mode.size();}
-    void print_database_dl();
+    void print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode);
     void merge_all_database_dl();
-    void print_all_database_dl();
+    void print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode); 
     void update_rar_time_crnti(uint16_t crnti, clock_t cur_time);
     void update_statistic_dl(uint16_t RNTI,
                             bool tb_en[SRSRAN_MAX_CODEWORDS],
@@ -132,7 +133,7 @@ public:
     
     /*Manage UE-specific-configuration*/
     void                        update_ue_config_rnti(uint16_t rnti, ltesniffer_ue_spec_config_t ue_spec_config);
-    ltesniffer_ue_spec_config_t get_ue_config_rnti(uint16_t rnti);
+    ltesniffer_ue_spec_config_t get_ue_config_rnti(uint16_t rnti, int DL_or_UL);
     void                        update_default_ue_config(ltesniffer_ue_spec_config_t ue_spec_config);
     
     double      get_interval() { return interval;}

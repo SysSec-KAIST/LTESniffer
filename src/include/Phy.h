@@ -29,6 +29,7 @@ public:
       double metaFormatSplitRatio,
       uint32_t histogramThreshold,
       LTESniffer_pcap_writer *pcapwriter,
+      std::vector<LTESniffer_stat_writer *> *filewriter_objs,
       MCSTracking *mcs_tracking, 
       HARQ *harq,
       int mcs_tracking_mode,

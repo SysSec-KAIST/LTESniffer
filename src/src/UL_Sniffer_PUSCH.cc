@@ -16,6 +16,7 @@ PUSCH_Decoder::PUSCH_Decoder(srsran_enb_ul_t &enb_ul,
                              cf_t **buffer_offset,
                              srsran_ul_cfg_t &ul_cfg,
                              LTESniffer_pcap_writer *pcapwriter,
+                             std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                              MCSTracking *mcstracking,
                              bool en_debug) : enb_ul(enb_ul),
                                               ul_sf(ul_sf),
@@ -25,6 +26,7 @@ PUSCH_Decoder::PUSCH_Decoder(srsran_enb_ul_t &enb_ul,
                                               buffer_offset(buffer_offset),
                                               ul_cfg(ul_cfg),
                                               pcapwriter(pcapwriter),
+                                              filewriter_objs(filewriter_objs),
                                               sf_power(),
                                               mcstracking(mcstracking),
                                               en_debug(en_debug)
@@ -273,7 +275,9 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
             tmp_sum += sf_power->getRBPowerUL().at(ul_cfg.pusch.grant.n_prb[0] + rb_idx);
         }
         falcon_signal_power = tmp_sum / ul_cfg.pusch.grant.L_prb;
-        print_debug(decoding_mem, info, modulation_mode, signal_power, enb_ul.chest_res.noise_estimate_dbm, falcon_signal_power);
+        srsran_dci_format_t cur_format = decoding_mem.format; 
+		std::string dci_fm = dci_format_ul(cur_format); 
+        print_debug(decoding_mem, dci_fm, info, modulation_mode, signal_power, enb_ul.chest_res.noise_estimate_dbm, falcon_signal_power);
     }
 
     if (pusch_res.crc == true && ul_cfg.pusch.grant.tb.tbs != 0)
@@ -415,14 +419,27 @@ void PUSCH_Decoder::decode()
         {
             /*Investigate current decoding member to know it has a valid UL grant or not*/
             valid_ul_grant = investigate_valid_ul_grant(decoding_mem);
+            valid_ul_grant_256 = investigate_valid_ul_grant_256(decoding_mem);
+            int some_valid_grant = (valid_ul_grant == SRSRAN_SUCCESS) || (valid_ul_grant_256 == SRSRAN_SUCCESS);
             /*Only decode member with valid UL grant*/
-            if (((decoding_mem.rnti == target_rnti && has_target_rnti) || (valid_ul_grant == SRSRAN_SUCCESS))&& decoding_mem.rnti != 0)
+            if (((decoding_mem.rnti == target_rnti) || (some_valid_grant == 1)) && decoding_mem.rnti != 0)
             {
                 /*Setup uplink config for decoding*/
                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                 ul_cfg.pusch.enable_64qam = false; // check here for 64/16QAM
                 ul_cfg.pusch.meas_ta_en = true;    // enable ta measurement
-                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
+                // start
+                bool set_grant = false;  
+                if(valid_ul_grant == SRSRAN_SUCCESS){
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;       
+                    set_grant = true;
+                }
+                if((set_grant == false) && (valid_ul_grant_256 == SRSRAN_SUCCESS)){
+                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;      
+                    set_grant = true;   
+                } 
+                if(set_grant == false){continue;}
+                // end
                 int mcs_idx = ul_cfg.pusch.grant.tb.mcs_idx;
                 pusch_res.crc = false;
                 /*Get Number of ack which was calculated in Subframe worker last 4 ms*/
@@ -430,7 +447,7 @@ void PUSCH_Decoder::decode()
                 // ul_cfg.pusch.uci_cfg.cqi.rank_is_not_one            = (decoding_mem.nof_ack == 2)?true:false;
 
                 /*get UE-specific configuration from database*/
-                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti);
+                ltesniffer_ue_spec_config_t ue_config = mcstracking->get_ue_config_rnti(decoding_mem.rnti, 1); 
                 ul_cfg.pusch.uci_cfg.cqi.type = ue_config.cqi_config.type;
                 ul_cfg.pusch.uci_offset = ue_config.uci_config;
                 /*If eNB requests for Aperiodic CSI report*/
@@ -473,7 +490,8 @@ void PUSCH_Decoder::decode()
                         decoding_mem.mcs_mod = UL_SNIFFER_256QAM_MAX;
                         ul_cfg.pusch.enable_64qam = true;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
-                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256.get();
+                        if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
+                        ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
                         {
                             decode_run("[PUSCH-256]", decoding_mem, modulation_mode, 0);
@@ -503,15 +521,17 @@ void PUSCH_Decoder::decode()
                                 ul_cfg.pusch.rnti = decoding_mem.rnti;
                                 ul_cfg.pusch.enable_64qam = true; // 64QAM
                                 ul_cfg.pusch.meas_ta_en = true;   // enable ta measurement
-                                ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
-
-                                decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
-
+                                if(valid_ul_grant == SRSRAN_SUCCESS){
+                                    ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant;
+                                    decode_run("[PUSCH-64 ]", decoding_mem, modulation_mode, falcon_signal_power);
+                                }
+                                    
                                 if (pusch_res.crc == false)
                                 { // try 256QAM table if 2 cases above failed
                                     ul_cfg.pusch.rnti = decoding_mem.rnti;
                                     ul_cfg.pusch.enable_64qam = true;
                                     ul_cfg.pusch.meas_ta_en = true; // enable ta measurement
+                                    if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                                     ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                                     modulation_mode = modulation_mode_string_256(mcs_idx);
                                     if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -542,6 +562,7 @@ void PUSCH_Decoder::decode()
                         break;
                     case UL_SNIFFER_256QAM_MAX:
                         ul_cfg.pusch.enable_64qam = true;
+                        if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                         ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                         modulation_mode = modulation_mode_string_256(mcs_idx);
                         if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -555,6 +576,7 @@ void PUSCH_Decoder::decode()
                         decode_run("[PUSCH-16 ]", decoding_mem, modulation_mode, 0);
                         if (pusch_res.crc == false)
                         { // try 256QAM table if case above failed
+                            if(valid_ul_grant_256 == SRSRAN_ERROR){continue;}
                             ul_cfg.pusch.grant = *decoding_mem.ran_ul_grant_256;
                             modulation_mode = modulation_mode_string_256(mcs_idx);
                             if (ul_cfg.pusch.grant.L_prb < 110 && ul_cfg.pusch.grant.L_prb > 0)
@@ -711,32 +733,52 @@ void PUSCH_Decoder::work_prach()
         }
     }
 }
-
-void PUSCH_Decoder::print_debug(DCI_UL &decoding_mem, std::string offset_name, std::string modulation_mode, float signal_pw, double noise, double falcon_sgl_pwr)
+// FIO FILE_IDX_UL_DCI 
+void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem, 
+                                    std::string format,
+                                    std::string offset_name, 
+                                    std::string modulation_mode, 
+                                    float signal_pw, 
+                                    double noise, 
+                                    double falcon_sgl_pwr)
 {
-    std::cout << std::left << std::setw(12) << offset_name << " SF: ";
-    std::cout << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
-    std::cout << " -- RNTI: ";
-    std::cout << std::left << std::setw(6) << decoding_mem.rnti;
+    std::stringstream msg;
+    
+    auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+	msg << "[" << cur_time_second << "]: ";
 
-    std::cout << GREEN << " -- DL-UL(us): ";
+    msg << std::left << std::setw(12) << offset_name << " SF: ";
+    msg << std::left << std::setw(4) << (int)ul_sf.tti / 10 << "." << (int)ul_sf.tti % 10;
+    msg << " -- RNTI: ";
+    msg << std::left << std::setw(6) << decoding_mem.rnti;
+    msg << WHITE << " -- DCI: " << std::left << std::setw(4) << format << RESET;
+
+    msg << GREEN << " -- DL-UL(us): ";
     if (enb_ul.chest_res.ta_us > 0)
     {
-        std::cout << "+";
+        msg << "+";
     }
     else if (enb_ul.chest_res.ta_us < 0)
     {
-        std::cout << "-";
+        msg << "-";
     }
     else
     {
-        std::cout << " ";
+        msg << " ";
     }
-    std::cout << std::left << std::setw(5) << abs(enb_ul.chest_res.ta_us) << RESET;
-    std::cout << " -- SNR(db): ";
-    std::cout << std::left << std::setw(6) << std::setprecision(3) << enb_ul.chest_res.snr_db;
+    msg << std::left << std::setw(5) << abs(enb_ul.chest_res.ta_us) << RESET;
+    msg << " -- SNR(db): ";
+    msg << std::left << std::setw(6) << std::setprecision(3) << enb_ul.chest_res.snr_db;
 
-    // std::cout << " -- F_Pwr: ";
+    // msg << " -- F_Pwr: ";
     // std::string pwr_sign;
     // int width = 0;
     // if (falcon_sgl_pwr < 0) {
@@ -747,40 +789,86 @@ void PUSCH_Decoder::print_debug(DCI_UL &decoding_mem, std::string offset_name, s
     //     pwr_sign = " ";
     //     width = 6;
     // }
-    // std::cout << std::left << pwr_sign << std::setw(width) << std::setprecision(3) << falcon_sgl_pwr;
+    // msg << std::left << pwr_sign << std::setw(width) << std::setprecision(3) << falcon_sgl_pwr;
 
-    std::cout << " -- CQI RQ: ";
-    std::cout << decoding_mem.ran_ul_dci->cqi_request << "|" << decoding_mem.ran_ul_dci->multiple_csi_request_present;
+    msg << " -- CQI RQ: ";
+    msg << decoding_mem.ran_ul_dci->cqi_request << "|" << decoding_mem.ran_ul_dci->multiple_csi_request_present;
 
-    std::cout << " -- Noise Pwr: ";
-    std::cout << std::left << std::setw(6) << std::setprecision(3) << noise;
+    msg << " -- Noise Pwr: ";
+    msg << std::left << std::setw(6) << std::setprecision(3) << noise;
 
-    std::cout << YELLOW << " -- MCS: ";
-    std::cout << std::left << std::setw(3) << ul_cfg.pusch.grant.tb.mcs_idx << RESET;
+    msg << YELLOW << " -- MCS: ";
+    msg << std::left << std::setw(3) << ul_cfg.pusch.grant.tb.mcs_idx << RESET;
 
-    std::cout << YELLOW << " -- ";
-    std::cout << std::left << std::setw(6) << modulation_mode << RESET;
+    msg << YELLOW << " -- ";
+    msg << std::left << std::setw(6) << modulation_mode << RESET;
 
-    std::cout << " -- ";
+    msg << " -- ";
     if (pusch_res.crc == false)
     {
-        std::cout << RED << std::setw(7) << "FAILED" << RESET;
-        std::cout << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
+        msg << RED << std::setw(7) << "FAILED" << RESET;
+        msg << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
     }
     else
     {
-        std::cout << BOLDGREEN << std::setw(7) << "SUCCESS" << RESET;
-        std::cout << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
+        msg << BOLDGREEN << std::setw(7) << "SUCCESS" << RESET;
+        msg << " -- Len: " << ul_cfg.pusch.grant.tb.tbs / 8;
     }
     if (decoding_mem.is_rar_gant)
     {
-        std::cout << " -- RAR";
+        msg << " -- RAR";
+        //std::cout << "RAR RAR RAR RAR RAR RAR" << std::endl;
     }
     if (decoding_mem.is_retx == 1)
     {
-        std::cout << " -- ReTX-UL";
+        msg << " -- ReTX-UL";
     }
-    std::cout << std::endl;
+    msg << std::endl;
+    if(DEBUG_DCI_PRINT==1){
+		std::cout << msg.str();
+	}
+    if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_UL_DCI]->write_stats(msg.str());
+	}
+}
+
+std::string PUSCH_Decoder::dci_format_ul(int format)
+{
+	std::string ret = "UNKNOWN";
+	switch (format)
+	{
+	case 0:
+		ret = "0";
+		break;
+	case 1:
+		ret = "1";
+		break;
+	case 2:
+		ret = "1A";
+		break;
+	case 3:
+		ret = "1B";
+		break;
+	case 4:
+		ret = "1C";
+		break;
+	case 5:
+		ret = "1D";
+		break;
+	case 6:
+		ret = "2";
+		break;
+	case 7:
+		ret = "2A";
+		break;
+	case 8:
+		ret = "2B";
+		break;
+	default:
+		ret = "UNKNOWN";
+		break;
+	}
+	return ret;
 }
 
 void PUSCH_Decoder::print_success(DCI_UL &decoding_mem, std::string offset_name, int table)
@@ -881,37 +969,90 @@ std::string convert_msg_name(int msg)
 }
 void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string value, int msg)
 {
-    std::cout << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;
+    std::stringstream msg_api; 
+    
+	auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+    std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+	msg_api << "[" << cur_time_second << "]: ";
+
+    msg_api << std::left << std::setw(4) << tti / 10 << "-" << std::left << std::setw(5) << tti % 10;
     std::string id_name = convert_id_name(id);
-    std::cout << std::left << std::setw(26) << id_name;
-    std::cout << std::left << std::setw(17) << value;
-    std::cout << std::left << std::setw(11) << rnti;
+    msg_api << std::left << std::setw(26) << id_name;
+    msg_api << std::left << std::setw(17) << value;
+    msg_api << std::left << std::setw(11) << rnti;
     std::string msg_name = convert_msg_name(msg);
-    std::cout << std::left << std::setw(25) << msg_name;
-    std::cout << std::endl;
-}
+    msg_api << std::left << std::setw(25) << msg_name;
+    msg_api << std::endl;
+    if(DEBUG_SEC_PRINT==1){
+		std::cout << msg_api.str();
+	}
+    if(FILE_WRITE==1){
+		(*filewriter_objs)[FILE_IDX_API]->write_stats(msg_api.str());
+	}
+} // UL
 
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)
 {
     int ret = SRSRAN_SUCCESS;
+    /*if RNTI == 0*/
+    if (decoding_mem.rnti == 0)
+    {
+        return SRSRAN_ERROR;
+    }
+    if(decoding_mem.ran_ul_grant==nullptr) 
+    {
+        return SRSRAN_ERROR;
+    }
     if (decoding_mem.is_rar_gant)
     {
         return SRSRAN_SUCCESS;
     }
-    /*if RNTI == 0*/
-    if (decoding_mem.rnti == 0)
-    {
-        ret = SRSRAN_ERROR;
-    }
     /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
-    if (decoding_mem.ran_ul_grant->tb.tbs == 0 || decoding_mem.ran_ul_grant_256->tb.tbs == 0)
+    if (decoding_mem.ran_ul_grant->tb.tbs == 0)
     {
-        ret = SRSRAN_ERROR;
+        return SRSRAN_ERROR;
     }
     /*if number of PRB is invalid*/
     if (!check_valid_prb_ul(decoding_mem.ran_ul_grant->L_prb))
     {
-        ret = SRSRAN_ERROR;
+        return SRSRAN_ERROR;
+    }
+
+    return ret;
+}
+
+int PUSCH_Decoder::investigate_valid_ul_grant_256(DCI_UL &decoding_mem)
+{
+    int ret = SRSRAN_SUCCESS;
+    /*if RNTI == 0*/
+    if (decoding_mem.rnti == 0)
+    {
+        return SRSRAN_ERROR;
+    }
+    if(decoding_mem.ran_ul_grant_256==nullptr) 
+    {
+        return SRSRAN_ERROR;
+    }
+    if (decoding_mem.is_rar_gant)
+    {
+        return SRSRAN_SUCCESS;
+    }
+    /*if Transport Block size = 0 (wrong DCI detection or retransmission or pdsch for ack and uci)*/
+    if (decoding_mem.ran_ul_grant_256->tb.tbs == 0)
+    {
+        return SRSRAN_ERROR;
+    }
+    /*if number of PRB is invalid*/
+    if (!check_valid_prb_ul(decoding_mem.ran_ul_grant_256->L_prb))
+    {
+        return SRSRAN_ERROR;
     }
 
     return ret;

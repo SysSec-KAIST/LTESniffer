@@ -20,6 +20,7 @@ public:
                  PhyCommon& common,
                  DCIMetaFormats& metaFormats,
                  LTESniffer_pcap_writer *pcapwriter,
+                 std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                  MCSTracking *mcs_tracking,
                  HARQ *harq,
                  int mcs_tracking_mode, 
@@ -65,6 +66,7 @@ private:
   bool                  collision_dw, collision_up;
   DCIBlindSearchStats   stats;
   LTESniffer_pcap_writer *pcapwriter;
+  std::vector<LTESniffer_stat_writer *> *filewriter_objs;
   PDSCH_Decoder         *pdschdecoder;
   int                   mcs_tracking_mode;
   MCSTracking           *mcs_tracking;

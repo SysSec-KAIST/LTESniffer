@@ -33,6 +33,7 @@
 #include "srsran/common/mac_pcap.h"
 #include "Phy.h"
 #include "PcapWriter.h"
+#include "FileWriter.h" 
 #include "HARQ.h"
 #include <ctime>
 #include <iostream>
@@ -65,6 +66,9 @@ using namespace srsran;
 #define UL_SNIFFER_UL_OFFSET_32 32
 #define UL_SNIFFER_UL_OFFSET_64 64
 
+void write_file_and_console(std::string mystring, LTESniffer_stat_writer* filewriter_obj);
+void cell_print(LTESniffer_stat_writer* filewriter_obj, srsran_cell_t* cell, uint32_t sfn);
+
 typedef struct {
   cf_t* ta_temp_buffer;
   cf_t  ta_last_sample[UL_SNIFFER_UL_MAX_OFFSET];
@@ -95,7 +99,7 @@ public:
   void resetDCIConsumer();
   void refreshShortcutDiscovery(bool val);
   void setRNTIThreshold(int val);
-  void print_api_header();
+  void print_api_header(LTESniffer_stat_writer  *filewriter_obj);
   bool run();
   void stop();
 private:
@@ -111,6 +115,16 @@ private:
   std::mutex              harq_map_mutex;
   Phy                     *phy;
   LTESniffer_pcap_writer  pcapwriter;
+  FILE * errfile;
+  //FILE * outfile;
+  std::vector<LTESniffer_stat_writer *> filewriter_objs;
+  LTESniffer_stat_writer  apiwriter;
+  LTESniffer_stat_writer  dlwriter;
+  LTESniffer_stat_writer  dldciwriter;
+  LTESniffer_stat_writer  ulwriter;
+  LTESniffer_stat_writer  uldciwriter;
+  LTESniffer_stat_writer  rarwriter;
+  LTESniffer_stat_writer  otherwriter;
   srsran::mac_pcap        mac_pcap;
   int                     mcs_tracking_mode;
   MCSTracking             mcs_tracking;

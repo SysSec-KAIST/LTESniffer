@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+#include "include/Sniffer_file_defs.h" 
+
 // include C-only headers
 #ifdef __cplusplus
     extern "C" {
@@ -36,8 +38,17 @@
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 
+
 #define DL_MODE     0
 #define UL_MODE     1
+#define DL_UL_MODE  2
+
+#define DEBUG_DCI_PRINT 0 // default not print to screen
+#define DEBUG_TABLE_PRINT 1 // default print when no SEC/API
+#define DEBUG_SEC_PRINT 1 // default print if active
+#define FILE_WRITE 1 // write everything to file
+
+#define UHD_FAIL_LIMIT 5
 
 #define ID_RAN_VAL  0
 #define ID_TMSI     1
@@ -52,7 +63,7 @@
 #define MSG_ID_RES  3
 #define MSG_UE_CAP  4
 #define MSG_PAGING  5
-#define MSG_CON_RECONFIG 6
+#define MSG_RAR     6
 
 struct DCI_BASE {
     DCI_BASE();

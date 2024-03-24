@@ -51,6 +51,7 @@ public:
                   cf_t** buffer_offset,
                   srsran_ul_cfg_t    &ul_cfg,
                   LTESniffer_pcap_writer *pcapwriter,
+                  std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                   MCSTracking *mcstracking,
                   bool en_debug);
     ~PUSCH_Decoder();
@@ -69,15 +70,18 @@ public:
     /*Investigate UL grant before decoding it*/
     int  check_valid_prb_ul(uint32_t nof_prb);
     int  investigate_valid_ul_grant(DCI_UL &decoding_mem);
+    int  investigate_valid_ul_grant_256(DCI_UL &decoding_mem);
 
     void decode_run(std::string info, DCI_UL &decoding_mem, std::string mod, float falcon_signal_power);
 
     void set_configed() { configed = true;}
     bool get_configed() { return configed;}
 
+    std::string dci_format_ul(int format);
     std::string modulation_mode_string(int mode, bool max_64qam);
     std::string modulation_mode_string_256(int idx);
     void print_debug(DCI_UL &decoding_mem, 
+                     std::string format,
                      std::string offset_name, 
                      std::string modulation_mode,
                      float signal_pw,
@@ -115,10 +119,12 @@ private:
     std::vector<DCI_UL>     *dci_ul;
     std::vector<DCI_UL>     *rar_dci_ul;
     int                     valid_ul_grant      = SRSRAN_ERROR;
+    int                     valid_ul_grant_256  = SRSRAN_ERROR;
 
     srsran_enb_ul_t         &enb_ul;
     srsran_ul_sf_cfg_t      &ul_sf;
     LTESniffer_pcap_writer  *pcapwriter;
+    std::vector<LTESniffer_stat_writer *> *filewriter_objs;
     srsran_pusch_res_t      pusch_res           = {};
     srsran_ul_cfg_t         &ul_cfg;
 

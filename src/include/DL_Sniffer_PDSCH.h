@@ -80,6 +80,7 @@ class PDSCH_Decoder
 public:
     PDSCH_Decoder(uint32_t idx, 
                   LTESniffer_pcap_writer *pcapwriter, 
+                  std::vector<LTESniffer_stat_writer *> *filewriter_objs,
                   MCSTracking *mcs_tracking,
                   RNTIManager& rntiManager,
                   HARQ *harq,
@@ -178,7 +179,7 @@ public:
     }
     void set_debug_mode(bool debug) { en_debug = debug;}
     void set_api_mode(int api_mode_) { api_mode = api_mode_;}
-    void print_api_dl(uint32_t tti, uint16_t rnti, int ident, std::string value, int msg);
+    void print_api_dl(uint32_t tti, uint16_t rnti, int ident, std::string value, int msg, uint32_t ta_rnti);
 
 private:
     int         api_mode            = -1; 
@@ -204,6 +205,7 @@ private:
     srsran_pdsch_res_t              *pdsch_res;
     srsran_pdsch_cfg_t              *pdsch_cfg; //buffer
     LTESniffer_pcap_writer          *pcapwriter;
+    std::vector<LTESniffer_stat_writer *> *filewriter_objs;
     RNTIManager                     &rntiManager;
     int                             mcs_tracking_mode;
     MCSTracking                     *mcs_tracking;

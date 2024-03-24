@@ -32,7 +32,7 @@ MCSTracking::~MCSTracking()
 ul_sniffer_mod_tracking_t MCSTracking::find_tracking_info_RNTI_ul(uint16_t RNTI)
 {
 
-    std::unique_lock<std::mutex> trackinglock(tracking_mutex);
+    std::lock_guard<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
     iter = tracking_database_ul_mode.find(RNTI);
     if ((nof_RNTI_member_ul() == 0) || (iter == tracking_database_ul_mode.end()))
@@ -53,7 +53,6 @@ ul_sniffer_mod_tracking_t MCSTracking::find_tracking_info_RNTI_ul(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_mod;
     }
-    trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_ul(uint16_t RNTI, ul_sniffer_mod_tracking_t mcs_mod)
@@ -238,13 +237,14 @@ void MCSTracking::merge_all_database_ul()
     trackinglock.unlock();
 }
 
-void print_statistic_rnti_ul_mode(std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter, int num, std::string info)
+void print_statistic_rnti_ul_mode(std::stringstream &msg, std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter, int num, std::string info)
 {
-    std::cout << std::left << std::setw(5) << num;
-    std::cout << std::left << std::setw(9) << iter->first;
-    std::cout << std::left << std::setw(12) << info;
-    std::cout << std::left << std::setw(9) << iter->second.nof_active;
-    std::cout << std::left << std::setw(9) << iter->second.nof_success_mgs;
+    msg << "            ";
+    msg << std::left << std::setw(5) << num;
+    msg << std::left << std::setw(9) << iter->first;
+    msg << std::left << std::setw(12) << info;
+    msg << std::left << std::setw(9) << iter->second.nof_active;
+    msg << std::left << std::setw(9) << iter->second.nof_success_mgs;
     float sum_snr = 0;
     float ave_snr = 0;
     if (iter->second.snr.size() > 0)
@@ -255,7 +255,7 @@ void print_statistic_rnti_ul_mode(std::map<uint16_t, ul_sniffer_tracking_t>::ite
         }
         ave_snr = sum_snr / iter->second.snr.size();
     }
-    std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+    msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
     // iter->second.snr.clear();
     /*TA*/
     float sum_ta = 0;
@@ -270,35 +270,49 @@ void print_statistic_rnti_ul_mode(std::map<uint16_t, ul_sniffer_tracking_t>::ite
     }
     if (ave_ta >= 0)
     {
-        std::cout << "+";
-        std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+        msg << "+";
+        msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
     }
     else
     {
-        std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+        msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
     }
 
-    std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-    std::cout << std::endl;
+    msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+    msg << std::endl;
 }
 
-void print_header_ul_mode()
+void print_header_ul_mode(std::stringstream &msg)
 {
-    std::cout << std::left << std::setw(5) << "Num";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Max Mod";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << std::left << std::setw(9) << "Success";
-    std::cout << std::left << std::setw(9) << "SNR(dB)";
-    std::cout << std::left << std::setw(18) << "DL-UL_delay(us)";
-    std::cout << std::left << std::setw(9) << "Other_Info";
-    std::cout << std::endl;
+    auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second;
+	if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+	msg << "[" << cur_time_second << "]: ";
+    
+    msg << std::left << std::setw(5) << "Num";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Max Mod";
+    msg << std::left << std::setw(9) << "Active";
+    msg << std::left << std::setw(9) << "Success";
+    msg << std::left << std::setw(9) << "SNR(dB)";
+    msg << std::left << std::setw(18) << "DL-UL_delay(us)";
+    msg << std::left << std::setw(9) << "Other_Info";
+    msg << std::endl;
 }
 
-void MCSTracking::print_database_ul()
+void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
+
+    std::stringstream msg; 
+
     int nof_16qam = 0;
     int nof_64qam = 0;
     int nof_256qam = 0;
@@ -307,23 +321,23 @@ void MCSTracking::print_database_ul()
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    print_header_ul_mode();
+    print_header_ul_mode(msg);
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = tracking_database_ul_mode.begin(); iter != tracking_database_ul_mode.end(); iter++)
     {
         if (iter->second.mcs_mod == UL_SNIFFER_16QAM_MAX && iter->second.nof_active > 0)
         {
-            print_statistic_rnti_ul_mode(iter, num, "16QAM");
+            print_statistic_rnti_ul_mode(msg, iter, num, "16QAM");
             nof_16qam++;
             num++;
         }
@@ -332,7 +346,7 @@ void MCSTracking::print_database_ul()
     {
         if (iter->second.mcs_mod == UL_SNIFFER_64QAM_MAX && iter->second.nof_active > 0)
         {
-            print_statistic_rnti_ul_mode(iter, num, "64QAM");
+            print_statistic_rnti_ul_mode(msg, iter, num, "64QAM");
             nof_64qam++;
             num++;
         }
@@ -341,18 +355,18 @@ void MCSTracking::print_database_ul()
     {
         if (iter->second.mcs_mod == UL_SNIFFER_256QAM_MAX && iter->second.nof_active > 0)
         {
-            print_statistic_rnti_ul_mode(iter, num, "256QAM");
+            print_statistic_rnti_ul_mode(msg, iter, num, "256QAM");
             nof_256qam++;
             num++;
         }
     }
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    print_header_ul_mode();
+    print_header_ul_mode(msg);
 
     for (iter = tracking_database_ul_mode.begin(); iter != tracking_database_ul_mode.end(); iter++)
     {
@@ -360,7 +374,7 @@ void MCSTracking::print_database_ul()
         {
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0 && iter->second.nof_active > 0))
             {
-                print_statistic_rnti_ul_mode(iter, num, "Unknown");
+                print_statistic_rnti_ul_mode(msg, iter, num, "Unknown");
                 nof_unknown++;
                 num++;
             }
@@ -369,9 +383,9 @@ void MCSTracking::print_database_ul()
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = tracking_database_ul_mode.begin(); iter != tracking_database_ul_mode.end(); iter++)
     {
@@ -379,21 +393,40 @@ void MCSTracking::print_database_ul()
         {
             if ((iter->second.nof_active > 0) && !(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
-                print_statistic_rnti_ul_mode(iter, num, "Unknown");
+                print_statistic_rnti_ul_mode(msg, iter, num, "Unknown");
                 nof_unknown++;
                 num++;
             }
         }
     }
-    printf("[256Tracking] Total: %d RNTIs are max 16QAM, %d RNTIs are max 64QAM table, %d RNTIs are max 256QAM, %d RNTIs are Unknown \n\n",
-           nof_16qam, nof_64qam, nof_256qam, nof_unknown);
+    
+    msg << "[256Tracking] Total: ";
+    msg << std::right << std::setw(6) << nof_64qam;
+    msg << " RNTIs are 64QAM table, ";
+    msg << std::right << std::setw(6) << nof_256qam;
+    msg << " RNTIs are 256QAM table, ";
+    msg << std::right << std::setw(6) << nof_unknown;
+    msg << " RNTIs are Unknown ";
+    msg << std::endl; 
+    msg << std::endl;
+
+    if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
+		std::cout << msg.str();
+	}
+    if(FILE_WRITE==1){
+        filewriter_obj->write_stats(msg.str());
+    }
+
     trackinglock.unlock();
 }
 
-void MCSTracking::print_all_database_ul()
+void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, ul_sniffer_tracking_t>::iterator iter;
+
+    std::stringstream msg; 
+
     int nof_16qam = 0;
     int nof_64qam = 0;
     int nof_256qam = 0;
@@ -402,42 +435,54 @@ void MCSTracking::print_all_database_ul()
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    std::cout << std::left << std::setw(5) << "Num";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Max Mod";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
-    std::cout << std::left << std::setw(9) << "SNR(dB)";
-    std::cout << std::left << std::setw(18) << "DL-UL_delay(us)";
-    std::cout << std::left << std::setw(9) << "Other_Info";
-    std::cout << std::endl;
+    auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+	msg << "[" << cur_time_second << "]: ";
+
+    msg << std::left << std::setw(5) << "Num";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Max Mod";
+    msg << std::left << std::setw(9) << "Active";
+    msg << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
+    msg << std::left << std::setw(9) << "SNR(dB)";
+    msg << std::left << std::setw(18) << "DL-UL_delay(us)";
+    msg << std::left << std::setw(9) << "Other_Info";
+    msg << std::endl;
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = all_database_ul_mode.begin(); iter != all_database_ul_mode.end(); iter++)
     {
         if (iter->second.mcs_mod == UL_SNIFFER_16QAM_MAX && iter->second.nof_active > 0)
         {
             nof_16qam++;
-            std::cout << std::left << std::setw(5) << num;
-            std::cout << std::left << std::setw(9) << iter->first;
-            std::cout << std::left << std::setw(12) << "16QAM";
-            std::cout << std::left << std::setw(9) << iter->second.nof_active;
+            msg << "            ";
+            msg << std::left << std::setw(5) << num;
+            msg << std::left << std::setw(9) << iter->first;
+            msg << std::left << std::setw(12) << "16QAM";
+            msg << std::left << std::setw(9) << iter->second.nof_active;
             int sc_percent = 0;
             if (iter->second.nof_active > 0)
             {
                 sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
             }
             std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-            std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+            msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
             float sum_snr = 0;
             float ave_snr = 0;
             if (iter->second.snr.size() > 0)
@@ -448,7 +493,7 @@ void MCSTracking::print_all_database_ul()
                 }
                 ave_snr = sum_snr / iter->second.snr.size();
             }
-            std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+            msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
             // iter->second.snr.clear();
             /*TA*/
             float sum_ta = 0;
@@ -463,15 +508,15 @@ void MCSTracking::print_all_database_ul()
             }
             if (ave_ta >= 0)
             {
-                std::cout << "+";
-                std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+                msg << "+";
+                msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
             }
             else
             {
-                std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+                msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
             }
-            std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-            std::cout << std::endl;
+            msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+            msg << std::endl;
             num++;
             // write_csv_file(iter->first, iter->second, iter->second.mcs_mod);
         }
@@ -481,17 +526,18 @@ void MCSTracking::print_all_database_ul()
         if (iter->second.mcs_mod == UL_SNIFFER_64QAM_MAX && iter->second.nof_active > 0)
         {
             nof_64qam++;
-            std::cout << std::left << std::setw(5) << num;
-            std::cout << std::left << std::setw(9) << iter->first;
-            std::cout << std::left << std::setw(12) << "64QAM";
-            std::cout << std::left << std::setw(9) << iter->second.nof_active;
+            msg << "            ";
+            msg << std::left << std::setw(5) << num;
+            msg << std::left << std::setw(9) << iter->first;
+            msg << std::left << std::setw(12) << "64QAM";
+            msg << std::left << std::setw(9) << iter->second.nof_active;
             int sc_percent = 0;
             if (iter->second.nof_active > 0)
             {
                 sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
             }
             std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-            std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+            msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
             float sum_snr = 0;
             float ave_snr = 0;
             if (iter->second.snr.size() > 0)
@@ -502,7 +548,7 @@ void MCSTracking::print_all_database_ul()
                 }
                 ave_snr = sum_snr / iter->second.snr.size();
             }
-            std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+            msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
             // iter->second.snr.clear();
             /*TA*/
             float sum_ta = 0;
@@ -517,15 +563,15 @@ void MCSTracking::print_all_database_ul()
             }
             if (ave_ta >= 0)
             {
-                std::cout << "+";
-                std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+                msg << "+";
+                msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
             }
             else
             {
-                std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+                msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
             }
-            std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-            std::cout << std::endl;
+            msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+            msg << std::endl;
             num++;
             // write_csv_file(iter->first, iter->second, iter->second.mcs_mod);
         }
@@ -534,17 +580,18 @@ void MCSTracking::print_all_database_ul()
     {
         if (iter->second.mcs_mod == UL_SNIFFER_256QAM_MAX && iter->second.nof_active > 0)
         {
-            std::cout << std::left << std::setw(5) << num;
-            std::cout << std::left << std::setw(9) << iter->first;
-            std::cout << std::left << std::setw(12) << "256QAM";
-            std::cout << std::left << std::setw(9) << iter->second.nof_active;
+            msg << "            ";
+            msg << std::left << std::setw(5) << num;
+            msg << std::left << std::setw(9) << iter->first;
+            msg << std::left << std::setw(12) << "256QAM";
+            msg << std::left << std::setw(9) << iter->second.nof_active;
             int sc_percent = 0;
             if (iter->second.nof_active > 0)
             {
                 sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
             }
             std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-            std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+            msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
             float sum_snr = 0;
             float ave_snr = 0;
             if (iter->second.snr.size() > 0)
@@ -555,7 +602,7 @@ void MCSTracking::print_all_database_ul()
                 }
                 ave_snr = sum_snr / iter->second.snr.size();
             }
-            std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+            msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
             // iter->second.snr.clear();
             /*TA*/
             float sum_ta = 0;
@@ -570,15 +617,15 @@ void MCSTracking::print_all_database_ul()
             }
             if (ave_ta >= 0)
             {
-                std::cout << "+";
-                std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+                msg << "+";
+                msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
             }
             else
             {
-                std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+                msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
             }
-            std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-            std::cout << std::endl;
+            msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+            msg << std::endl;
             nof_256qam++;
             num++;
             // write_csv_file(iter->first, iter->second, iter->second.mcs_mod);
@@ -586,19 +633,21 @@ void MCSTracking::print_all_database_ul()
     }
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    std::cout << std::left << std::setw(5) << "Num ";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Max Mod";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
-    std::cout << std::left << std::setw(9) << "SNR(dB)";
-    std::cout << std::left << std::setw(18) << "DL-UL_delay(us)";
-    std::cout << std::left << std::setw(9) << "Other_Info";
-    std::cout << std::endl;
+	msg << "[" << cur_time_second << "]: ";
+
+    msg << std::left << std::setw(5) << "Num ";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Max Mod";
+    msg << std::left << std::setw(9) << "Active";
+    msg << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
+    msg << std::left << std::setw(9) << "SNR(dB)";
+    msg << std::left << std::setw(18) << "DL-UL_delay(us)";
+    msg << std::left << std::setw(9) << "Other_Info";
+    msg << std::endl;
 
     for (iter = all_database_ul_mode.begin(); iter != all_database_ul_mode.end(); iter++)
     {
@@ -606,17 +655,18 @@ void MCSTracking::print_all_database_ul()
         {
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
-                std::cout << std::left << std::setw(5) << num;
-                std::cout << std::left << std::setw(9) << iter->first;
-                std::cout << std::left << std::setw(12) << "Unknown";
-                std::cout << std::left << std::setw(9) << iter->second.nof_active;
+                msg << "            ";
+                msg << std::left << std::setw(5) << num;
+                msg << std::left << std::setw(9) << iter->first;
+                msg << std::left << std::setw(12) << "Unknown";
+                msg << std::left << std::setw(9) << iter->second.nof_active;
                 int sc_percent = 0;
                 if (iter->second.nof_active > 0)
                 {
                     sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
                 }
                 std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-                std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+                msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
                 float sum_snr = 0;
                 float ave_snr = 0;
                 if (iter->second.snr.size() > 0)
@@ -627,7 +677,7 @@ void MCSTracking::print_all_database_ul()
                     }
                     ave_snr = sum_snr / iter->second.snr.size();
                 }
-                std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+                msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
                 // iter->second.snr.clear();
                 /*TA*/
                 float sum_ta = 0;
@@ -642,15 +692,15 @@ void MCSTracking::print_all_database_ul()
                 }
                 if (ave_ta >= 0)
                 {
-                    std::cout << "+";
-                    std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+                    msg << "+";
+                    msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
                 }
                 else
                 {
-                    std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+                    msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
                 }
-                std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-                std::cout << std::endl;
+                msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+                msg << std::endl;
                 nof_unknown++;
                 num++;
                 // write_csv_file(iter->first, iter->second, iter->second.mcs_mod);
@@ -660,9 +710,9 @@ void MCSTracking::print_all_database_ul()
 
     for (int i = 0; i < 86; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = all_database_ul_mode.begin(); iter != all_database_ul_mode.end(); iter++)
     {
@@ -670,17 +720,18 @@ void MCSTracking::print_all_database_ul()
         {
             if (!(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
-                std::cout << std::left << std::setw(5) << num;
-                std::cout << std::left << std::setw(9) << iter->first;
-                std::cout << std::left << std::setw(12) << "Unknown";
-                std::cout << std::left << std::setw(9) << iter->second.nof_active;
+                msg << "            ";
+                msg << std::left << std::setw(5) << num;
+                msg << std::left << std::setw(9) << iter->first;
+                msg << std::left << std::setw(12) << "Unknown";
+                msg << std::left << std::setw(9) << iter->second.nof_active;
                 int sc_percent = 0;
                 if (iter->second.nof_newtx > 0)
                 {
                     sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
                 }
                 std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-                std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+                msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
                 float sum_snr = 0;
                 float ave_snr = 0;
                 if (iter->second.snr.size() > 0)
@@ -691,7 +742,7 @@ void MCSTracking::print_all_database_ul()
                     }
                     ave_snr = sum_snr / iter->second.snr.size();
                 }
-                std::cout << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
+                msg << std::left << std::setw(9) << std::setprecision(3) << ave_snr;
                 // iter->second.snr.clear();
                 /*TA*/
                 float sum_ta = 0;
@@ -706,25 +757,40 @@ void MCSTracking::print_all_database_ul()
                 }
                 if (ave_ta >= 0)
                 {
-                    std::cout << "+";
-                    std::cout << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
+                    msg << "+";
+                    msg << std::left << std::setw(17) << std::setprecision(3) << ave_ta;
                 }
                 else
                 {
-                    std::cout << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
+                    msg << std::left << std::setw(18) << std::setprecision(3) << ave_ta;
                 }
-                std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-                std::cout << std::endl;
+                msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+                msg << std::endl;
                 nof_unknown++;
                 num++;
             }
         }
     }
-    printf("[256Tracking] Total: %d RNTIs are max 16QAM table, %d RNTIs are max 64QAM table, %d RNTIs are max 256QAM, %d RNTIs are Unknown \n\n",
-           nof_16qam, nof_64qam, nof_256qam, nof_unknown);
+    
+    msg << "[256Tracking] Total: ";
+    msg << std::right << std::setw(6) << nof_64qam;
+    msg << " RNTIs are 64QAM table, ";
+    msg << std::right << std::setw(6) << nof_256qam;
+    msg << " RNTIs are 256QAM table, ";
+    msg << std::right << std::setw(6) << nof_unknown;
+    msg << " RNTIs are Unknown ";
+    msg << std::endl; 
+    msg << std::endl;
+
+    if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
+		std::cout << msg.str();
+	}
+    if(FILE_WRITE==1){
+        filewriter_obj->write_stats(msg.str());
+    }
 
     trackinglock.unlock();
-}
+} // print_all_database_ul
 
 void MCSTracking::update_statistic_ul(uint16_t RNTI,
                                       bool success,
@@ -758,7 +824,7 @@ void MCSTracking::update_statistic_ul(uint16_t RNTI,
 dl_sniffer_mcs_table_t MCSTracking::find_tracking_info_RNTI_dl(uint16_t RNTI)
 {
 
-    std::unique_lock<std::mutex> trackinglock(tracking_mutex);
+    std::lock_guard<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
     iter = tracking_database_dl_mode.find(RNTI);
     if ((nof_RNTI_member_dl() == 0) || (iter == tracking_database_dl_mode.end()))
@@ -779,7 +845,6 @@ dl_sniffer_mcs_table_t MCSTracking::find_tracking_info_RNTI_dl(uint16_t RNTI)
         iter->second.time = cur_time;
         return iter->second.mcs_table;
     }
-    trackinglock.unlock();
 }
 
 int MCSTracking::add_RNTI_dl(uint16_t RNTI, dl_sniffer_mcs_table_t mcs_table)
@@ -962,44 +1027,59 @@ void MCSTracking::merge_all_database_dl()
     trackinglock.unlock();
 }
 
-void print_statistic_rnti(std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter, int num, std::string info)
+void print_statistic_rnti(std::stringstream &msg,std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter, int num, std::string info)
 {
-    std::cout << std::left << std::setw(5) << num;
-    std::cout << std::left << std::setw(9) << iter->first;
-    std::cout << std::left << std::setw(12) << info;
-    std::cout << std::left << std::setw(9) << iter->second.nof_active;
-    std::cout << std::left << std::setw(9) << iter->second.nof_newtx;
-    std::cout << std::left << std::setw(9) << iter->second.nof_retx;
-    std::cout << std::left << std::setw(9) << iter->second.nof_success_mgs;
-    std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
-    std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
-    std::cout << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
-    std::cout << std::left << std::setw(9) << iter->second.nof_pinfo;
-    std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-    std::cout << std::endl;
+    msg << "            ";
+    msg << std::left << std::setw(5) << num;
+    msg << std::left << std::setw(9) << iter->first;
+    msg << std::left << std::setw(12) << info;
+    msg << std::left << std::setw(9) << iter->second.nof_active;
+    msg << std::left << std::setw(9) << iter->second.nof_newtx;
+    msg << std::left << std::setw(9) << iter->second.nof_retx;
+    msg << std::left << std::setw(9) << iter->second.nof_success_mgs;
+    msg << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
+    msg << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
+    msg << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
+    msg << std::left << std::setw(9) << iter->second.nof_pinfo;
+    msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+    msg << std::endl;
 }
 
-void print_header()
+void print_header(std::stringstream &msg)
 {
-    std::cout << std::left << std::setw(5) << "Num";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Table";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << std::left << std::setw(9) << "New TX";
-    std::cout << std::left << std::setw(9) << "ReTX";
-    std::cout << std::left << std::setw(9) << "Success";
-    std::cout << std::left << std::setw(9) << "HARQ";
-    std::cout << std::left << std::setw(9) << "Normal";
-    std::cout << std::left << std::setw(9) << "W_MIMO";
-    std::cout << std::left << std::setw(9) << "W_pinfor";
-    std::cout << std::left << std::setw(9) << "Other ";
-    std::cout << std::endl;
+    auto now = std::chrono::system_clock::now();
+    std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+    std::string str_cur_time(std::ctime(&cur_time));
+    std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+    msg << "[" << cur_time_second << "]: ";
+
+    msg << std::left << std::setw(5) << "Num";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Table";
+    msg << std::left << std::setw(9) << "Active";
+    msg << std::left << std::setw(9) << "New TX";
+    msg << std::left << std::setw(9) << "ReTX";
+    msg << std::left << std::setw(9) << "Success";
+    msg << std::left << std::setw(9) << "HARQ";
+    msg << std::left << std::setw(9) << "Normal";
+    msg << std::left << std::setw(9) << "W_MIMO";
+    msg << std::left << std::setw(9) << "W_pinfor";
+    msg << std::left << std::setw(9) << "Other ";
+    msg << std::endl;
 }
 
-void MCSTracking::print_database_dl()
+void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
+    
+    std::stringstream msg; 
+
     int nof_64qam = 0;
     int nof_256qam = 0;
     int nof_unknown = 0;
@@ -1007,23 +1087,23 @@ void MCSTracking::print_database_dl()
 
     for (int i = 0; i < 104; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    print_header();
+    print_header(msg);
 
     for (int i = 0; i < 104; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
     for (iter = tracking_database_dl_mode.begin(); iter != tracking_database_dl_mode.end(); iter++)
     {
         if (iter->second.mcs_table == DL_SNIFFER_64QAM_TABLE)
         {
             nof_64qam++;
-            print_statistic_rnti(iter, num, "64QAM");
+            print_statistic_rnti(msg, iter, num, "64QAM");
             num++;
         }
     }
@@ -1031,18 +1111,18 @@ void MCSTracking::print_database_dl()
     {
         if (iter->second.mcs_table == DL_SNIFFER_256QAM_TABLE)
         {
-            print_statistic_rnti(iter, num, "256QAM");
+            print_statistic_rnti(msg, iter, num, "256QAM");
             nof_256qam++;
             num++;
         }
     }
     for (int i = 0; i < 104; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    print_header();
+    print_header(msg);
     for (iter = tracking_database_dl_mode.begin(); iter != tracking_database_dl_mode.end(); iter++)
     {
         if (iter->second.mcs_table == DL_SNIFFER_UNKNOWN_TABLE)
@@ -1050,7 +1130,7 @@ void MCSTracking::print_database_dl()
             /*iter->second.nof_active > 0: some RNTIs have nof_active = 0 due to only obatained from rar message only, no other actives*/
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0 && iter->second.nof_active > 0))
             {
-                print_statistic_rnti(iter, num, "Unknown");
+                print_statistic_rnti(msg, iter, num, "Unknown");
                 nof_unknown++;
                 num++;
             }
@@ -1059,9 +1139,9 @@ void MCSTracking::print_database_dl()
 
     for (int i = 0; i < 104; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = tracking_database_dl_mode.begin(); iter != tracking_database_dl_mode.end(); iter++)
     {
@@ -1070,21 +1150,40 @@ void MCSTracking::print_database_dl()
             /*iter->second.nof_active > 0: some RNTIs have nof_active = 0 due to only obatained from rar message only, no other actives*/
             if (!(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0) && iter->second.nof_active > 0)
             {
-                print_statistic_rnti(iter, num, "Unknown");
+                print_statistic_rnti(msg, iter, num, "Unknown");
                 nof_unknown++;
                 num++;
             }
         }
     }
-    printf("[256Tracking] Total: %d RNTIs are 64QAM table, %d RNTIs are 256QAM table, %d RNTIs are Unknown \n\n",
-           nof_64qam, nof_256qam, nof_unknown);
-    trackinglock.unlock();
-}
 
-void MCSTracking::print_all_database_dl()
+    msg << "[256Tracking] Total: ";
+    msg << std::right << std::setw(6) << nof_64qam;
+    msg << " RNTIs are 64QAM table, ";
+    msg << std::right << std::setw(6) << nof_256qam;
+    msg << " RNTIs are 256QAM table, ";
+    msg << std::right << std::setw(6) << nof_unknown;
+    msg << " RNTIs are Unknown ";
+    msg << std::endl; 
+    msg << std::endl;
+
+    if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
+		std::cout << msg.str();
+	}
+    if(FILE_WRITE==1){
+        filewriter_obj->write_stats(msg.str());
+    }
+
+    trackinglock.unlock();
+} // print_database_dl
+
+void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj, int api_mode)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator iter;
+
+    std::stringstream msg; 
+
     int nof_64qam = 0;
     int nof_256qam = 0;
     int nof_unknown = 0;
@@ -1092,54 +1191,66 @@ void MCSTracking::print_all_database_dl()
 
     for (int i = 0; i < 109; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    std::cout << std::left << std::setw(5) << "Num";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Table";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << RED << std::left << std::setw(9) << "New TX" << RESET;
-    std::cout << std::left << std::setw(9) << "ReTX";
-    std::cout << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
-    std::cout << std::left << std::setw(9) << "HARQ";
-    std::cout << std::left << std::setw(9) << "Normal";
-    std::cout << std::left << std::setw(9) << "W_MIMO";
-    std::cout << std::left << std::setw(9) << "W_pinfor";
-    std::cout << std::left << std::setw(9) << "Other ";
-    std::cout << std::endl;
+    auto now = std::chrono::system_clock::now();
+	std::time_t cur_time = std::chrono::system_clock::to_time_t(now);
+	std::string str_cur_time(std::ctime(&cur_time));
+	std::string cur_time_second;
+    if(str_cur_time.length()>=(11+8)){
+        cur_time_second = str_cur_time.substr(11,8);
+    }else{
+        cur_time_second = "";
+    }
+	msg << "[" << cur_time_second << "]: ";
+
+    msg << std::left << std::setw(5) << "Num";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Table";
+    msg << std::left << std::setw(9) << "Active";
+    msg << RED << std::left << std::setw(9) << "New TX" << RESET;
+    msg << std::left << std::setw(9) << "ReTX";
+    msg << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
+    msg << std::left << std::setw(9) << "HARQ";
+    msg << std::left << std::setw(9) << "Normal";
+    msg << std::left << std::setw(9) << "W_MIMO";
+    msg << std::left << std::setw(9) << "W_pinfor";
+    msg << std::left << std::setw(9) << "Other ";
+    msg << std::endl;
 
     for (int i = 0; i < 109; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = all_database_dl_mode.begin(); iter != all_database_dl_mode.end(); iter++)
     {
         if (iter->second.mcs_table == DL_SNIFFER_64QAM_TABLE)
         {
             nof_64qam++;
-            std::cout << std::left << std::setw(5) << num;
-            std::cout << std::left << std::setw(9) << iter->first;
-            std::cout << std::left << std::setw(12) << "64QAM";
-            std::cout << std::left << std::setw(9) << iter->second.nof_active;
-            std::cout << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
-            std::cout << std::left << std::setw(9) << iter->second.nof_retx;
+            msg << "            ";
+            msg << std::left << std::setw(5) << num;
+            msg << std::left << std::setw(9) << iter->first;
+            msg << std::left << std::setw(12) << "64QAM";
+            msg << std::left << std::setw(9) << iter->second.nof_active;
+            msg << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
+            msg << std::left << std::setw(9) << iter->second.nof_retx;
             int sc_percent = 0;
             if (iter->second.nof_newtx > 0)
             {
                 sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
             }
             std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-            std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
-            std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
-            std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
-            std::cout << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
-            std::cout << std::left << std::setw(9) << iter->second.nof_pinfo;
-            std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-            std::cout << std::endl;
+            msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+            msg << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
+            msg << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
+            msg << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
+            msg << std::left << std::setw(9) << iter->second.nof_pinfo;
+            msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+            msg << std::endl;
             num++;
             write_csv_file(iter->first, iter->second, iter->second.mcs_table);
         }
@@ -1148,25 +1259,26 @@ void MCSTracking::print_all_database_dl()
     {
         if (iter->second.mcs_table == DL_SNIFFER_256QAM_TABLE)
         {
-            std::cout << std::left << std::setw(5) << num;
-            std::cout << std::left << std::setw(9) << iter->first;
-            std::cout << std::left << std::setw(12) << "256QAM";
-            std::cout << std::left << std::setw(9) << iter->second.nof_active;
-            std::cout << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
-            std::cout << std::left << std::setw(9) << iter->second.nof_retx;
+            msg << "            ";
+            msg << std::left << std::setw(5) << num;
+            msg << std::left << std::setw(9) << iter->first;
+            msg << std::left << std::setw(12) << "256QAM";
+            msg << std::left << std::setw(9) << iter->second.nof_active;
+            msg << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
+            msg << std::left << std::setw(9) << iter->second.nof_retx;
             int sc_percent = 0;
             if (iter->second.nof_newtx > 0)
             {
                 sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
             }
             std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-            std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
-            std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
-            std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
-            std::cout << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
-            std::cout << std::left << std::setw(9) << iter->second.nof_pinfo;
-            std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-            std::cout << std::endl;
+            msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+            msg << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
+            msg << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
+            msg << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
+            msg << std::left << std::setw(9) << iter->second.nof_pinfo;
+            msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+            msg << std::endl;
             nof_256qam++;
             num++;
             write_csv_file(iter->first, iter->second, iter->second.mcs_table);
@@ -1174,23 +1286,25 @@ void MCSTracking::print_all_database_dl()
     }
     for (int i = 0; i < 109; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
-    std::cout << std::left << std::setw(5) << "Num ";
-    std::cout << std::left << std::setw(9) << "RNTI";
-    std::cout << std::left << std::setw(12) << "Table";
-    std::cout << std::left << std::setw(9) << "Active";
-    std::cout << RED << std::left << std::setw(9) << "New TX" << RESET;
-    std::cout << std::left << std::setw(9) << "ReTX";
-    std::cout << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
-    std::cout << std::left << std::setw(9) << "HARQ";
-    std::cout << std::left << std::setw(9) << "Normal";
-    std::cout << std::left << std::setw(9) << "W_MIMO";
-    std::cout << std::left << std::setw(9) << "W_pinfor";
-    std::cout << std::left << std::setw(9) << "Other";
-    std::cout << std::endl;
+	msg << "[" << cur_time_second << "]: ";
+
+    msg << std::left << std::setw(5) << "Num ";
+    msg << std::left << std::setw(9) << "RNTI";
+    msg << std::left << std::setw(12) << "Table";
+    msg << std::left << std::setw(9) << "Active";
+    msg << RED << std::left << std::setw(9) << "New TX" << RESET;
+    msg << std::left << std::setw(9) << "ReTX";
+    msg << BOLDGREEN << std::left << std::setw(13) << "Success" << RESET;
+    msg << std::left << std::setw(9) << "HARQ";
+    msg << std::left << std::setw(9) << "Normal";
+    msg << std::left << std::setw(9) << "W_MIMO";
+    msg << std::left << std::setw(9) << "W_pinfor";
+    msg << std::left << std::setw(9) << "Other";
+    msg << std::endl;
 
     for (iter = all_database_dl_mode.begin(); iter != all_database_dl_mode.end(); iter++)
     {
@@ -1198,25 +1312,26 @@ void MCSTracking::print_all_database_dl()
         {
             if ((iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0 && iter->second.nof_active > 0))
             {
-                std::cout << std::left << std::setw(5) << num;
-                std::cout << std::left << std::setw(9) << iter->first;
-                std::cout << std::left << std::setw(12) << "Unknown";
-                std::cout << std::left << std::setw(9) << iter->second.nof_active;
-                std::cout << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
-                std::cout << std::left << std::setw(9) << iter->second.nof_retx;
+                msg << "            ";
+                msg << std::left << std::setw(5) << num;
+                msg << std::left << std::setw(9) << iter->first;
+                msg << std::left << std::setw(12) << "Unknown";
+                msg << std::left << std::setw(9) << iter->second.nof_active;
+                msg << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
+                msg << std::left << std::setw(9) << iter->second.nof_retx;
                 int sc_percent = 0;
                 if (iter->second.nof_newtx > 0)
                 {
                     sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
                 }
                 std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-                std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
-                std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
-                std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
-                std::cout << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
-                std::cout << std::left << std::setw(9) << iter->second.nof_pinfo;
-                std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-                std::cout << std::endl;
+                msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+                msg << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
+                msg << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
+                msg << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
+                msg << std::left << std::setw(9) << iter->second.nof_pinfo;
+                msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+                msg << std::endl;
                 nof_unknown++;
                 num++;
                 write_csv_file(iter->first, iter->second, iter->second.mcs_table);
@@ -1226,9 +1341,9 @@ void MCSTracking::print_all_database_dl()
 
     for (int i = 0; i < 109; i++)
     {
-        std::cout << "-";
+        msg << "-";
     }
-    std::cout << std::endl;
+    msg << std::endl;
 
     for (iter = all_database_dl_mode.begin(); iter != all_database_dl_mode.end(); iter++)
     {
@@ -1236,35 +1351,51 @@ void MCSTracking::print_all_database_dl()
         {
             if ((iter->second.nof_active > 0) && !(iter->second.nof_unsupport_mimo == 0 && iter->second.nof_pinfo == 0 && iter->second.nof_other_mimo == 0))
             {
-                std::cout << std::left << std::setw(5) << num;
-                std::cout << std::left << std::setw(9) << iter->first;
-                std::cout << std::left << std::setw(12) << "Unknown";
-                std::cout << std::left << std::setw(9) << iter->second.nof_active;
-                std::cout << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
-                std::cout << std::left << std::setw(9) << iter->second.nof_retx;
+                msg << "            ";
+                msg << std::left << std::setw(5) << num;
+                msg << std::left << std::setw(9) << iter->first;
+                msg << std::left << std::setw(12) << "Unknown";
+                msg << std::left << std::setw(9) << iter->second.nof_active;
+                msg << RED << std::left << std::setw(9) << iter->second.nof_newtx << RESET;
+                msg << std::left << std::setw(9) << iter->second.nof_retx;
                 int sc_percent = 0;
                 if (iter->second.nof_newtx > 0)
                 {
                     sc_percent = std::roundf(((float)iter->second.nof_success_mgs / (float)iter->second.nof_active) * 100);
                 }
                 std::string sc_pc_str = std::to_string(iter->second.nof_success_mgs) + '(' + std::to_string(sc_percent) + "%)";
-                std::cout << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
-                std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
-                std::cout << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
-                std::cout << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
-                std::cout << std::left << std::setw(9) << iter->second.nof_pinfo;
-                std::cout << std::left << std::setw(9) << iter->second.nof_other_mimo;
-                std::cout << std::endl;
+                msg << BOLDGREEN << std::left << std::setw(13) << sc_pc_str << RESET;
+                msg << std::left << std::setw(9) << iter->second.nof_success_retx_harq;
+                msg << std::left << std::setw(9) << iter->second.nof_success_retx_nom;
+                msg << std::left << std::setw(9) << iter->second.nof_unsupport_mimo;
+                msg << std::left << std::setw(9) << iter->second.nof_pinfo;
+                msg << std::left << std::setw(9) << iter->second.nof_other_mimo;
+                msg << std::endl;
                 nof_unknown++;
                 num++;
             }
         }
     }
-    printf("[256Tracking] Total: %d RNTIs are 64QAM table, %d RNTIs are 256QAM table, %d RNTIs are Unknown \n\n",
-           nof_64qam, nof_256qam, nof_unknown);
+
+    msg << "[256Tracking] Total: ";
+    msg << std::right << std::setw(6) << nof_64qam;
+    msg << " RNTIs are 64QAM table, ";
+    msg << std::right << std::setw(6) << nof_256qam;
+    msg << " RNTIs are 256QAM table, ";
+    msg << std::right << std::setw(6) << nof_unknown;
+    msg << " RNTIs are Unknown ";
+    msg << std::endl; 
+    msg << std::endl;
+
+    if(DEBUG_TABLE_PRINT==1 && api_mode == -1){
+		std::cout << msg.str();
+	}
+    if(FILE_WRITE==1){
+        filewriter_obj->write_stats(msg.str());
+    }
 
     trackinglock.unlock();
-}
+} // print_all_database_dl
 
 void MCSTracking::update_statistic_dl(uint16_t RNTI,
                                       bool tb_en[SRSRAN_MAX_CODEWORDS],
@@ -1476,16 +1607,45 @@ void MCSTracking::update_ue_config_rnti(uint16_t rnti, ltesniffer_ue_spec_config
             ul_iter->second.ue_spec_config = ue_spec_config;
         }
     }
+    else if (sniffer_mode == DL_UL_MODE) 
+    {
+        // Downlink
+        std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
+        dl_iter = tracking_database_dl_mode.find(rnti);
+        if (dl_iter != tracking_database_dl_mode.end())
+        {
+            dl_iter->second.ue_spec_config = ue_spec_config;
+        }
+        else
+        {
+            add_RNTI_dl(rnti, DL_SNIFFER_UNKNOWN_TABLE);
+            dl_iter = tracking_database_dl_mode.find(rnti);
+            dl_iter->second.ue_spec_config = ue_spec_config;
+        }
+        // Uplink
+        std::map<uint16_t, ul_sniffer_tracking_t>::iterator ul_iter;
+        ul_iter = tracking_database_ul_mode.find(rnti);
+        if (ul_iter != tracking_database_ul_mode.end())
+        {
+            ul_iter->second.ue_spec_config = ue_spec_config;
+        }
+        else
+        {
+            add_RNTI_ul(rnti, UL_SNIFFER_UNKNOWN_MOD);
+            ul_iter = tracking_database_ul_mode.find(rnti);
+            ul_iter->second.ue_spec_config = ue_spec_config;
+        }
+    }
     trackinglock.unlock();
 }
 
-ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti)
+ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti, int DL_or_UL)
 {
     std::unique_lock<std::mutex> trackinglock(tracking_mutex);
     ltesniffer_ue_spec_config_t ue_spec_config = {};
     ue_spec_config = default_ue_spec_config;
     ue_spec_config.has_ue_config = false;
-    if (sniffer_mode == DL_MODE)
+    if (DL_or_UL == 0) 
     {
         std::map<uint16_t, dl_sniffer_mcs_tracking_t>::iterator dl_iter;
         dl_iter = tracking_database_dl_mode.find(rnti);
@@ -1498,7 +1658,7 @@ ltesniffer_ue_spec_config_t MCSTracking::get_ue_config_rnti(uint16_t rnti)
             // nothing
         }
     }
-    else if (sniffer_mode == UL_MODE)
+    else if (DL_or_UL == 1) 
     {
         std::map<uint16_t, ul_sniffer_tracking_t>::iterator ul_iter;
         ul_iter = tracking_database_ul_mode.find(rnti);
