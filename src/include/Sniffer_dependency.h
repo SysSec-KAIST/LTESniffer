@@ -43,10 +43,10 @@
 #define UL_MODE     1
 #define DL_UL_MODE  2
 
-#define DEBUG_DCI_PRINT 0 // default not print to screen
-#define DEBUG_TABLE_PRINT 1 // default print when no SEC/API
-#define DEBUG_SEC_PRINT 1 // default print if active
-#define FILE_WRITE 1 // write everything to file
+#define DEBUG_DCI_PRINT 0       // default not print to screen
+#define DEBUG_TABLE_PRINT 1     // default print when no SEC/API
+#define DEBUG_SEC_PRINT 1       // default print if active
+#define FILE_WRITE 1            // write everything to file
 
 #define UHD_FAIL_LIMIT 5
 
@@ -64,6 +64,7 @@
 #define MSG_UE_CAP  4
 #define MSG_PAGING  5
 #define MSG_RAR     6
+#define MSG_CON_RECONFIG 7
 
 struct DCI_BASE {
     DCI_BASE();

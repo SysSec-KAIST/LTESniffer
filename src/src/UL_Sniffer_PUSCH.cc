@@ -265,7 +265,7 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
     }
 
     /*Only print debug when SNR of RNTI >= 1 */
-    if ((en_debug) && ((enb_ul.chest_res.snr_db >= 1 && !has_target_rnti) || (decoding_mem.rnti == target_rnti && has_target_rnti))&& decoding_mem.rnti != 0)
+    if ((en_debug || FILE_WRITE) && ((enb_ul.chest_res.snr_db >= 1 && !has_target_rnti) || (decoding_mem.rnti == target_rnti && has_target_rnti))&& decoding_mem.rnti != 0)
     {
         float signal_power = enb_ul.chest_res.snr_db;
         float falcon_signal_power = 0.0f;
@@ -824,7 +824,7 @@ void PUSCH_Decoder::print_debug(    DCI_UL &decoding_mem,
         msg << " -- ReTX-UL";
     }
     msg << std::endl;
-    if(DEBUG_DCI_PRINT==1){
+    if(en_debug){
 		std::cout << msg.str();
 	}
     if(FILE_WRITE==1){

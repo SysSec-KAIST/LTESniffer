@@ -159,7 +159,7 @@ void RNTIManager::addForbidden(uint16_t rntiStart, uint16_t rntiEnd, uint32_t fo
 }
 
 void RNTIManager::addCandidate(uint16_t rnti, uint32_t formatIdx) {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   histograms[formatIdx].add(rnti);
   remainingCandidates[formatIdx]--;
 }
@@ -195,7 +195,7 @@ bool RNTIManager::validate(uint16_t rnti, uint32_t formatIdx) {
 bool RNTIManager::validateAndRefresh(uint16_t rnti, uint32_t formatIdx) {
   bool result = validate(rnti, formatIdx);
   if(result) {
-    std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+    std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
     lastSeen[rnti] = timestamp;
     rntiManagerLock.unlock();
   }
@@ -204,7 +204,7 @@ bool RNTIManager::validateAndRefresh(uint16_t rnti, uint32_t formatIdx) {
 
 void RNTIManager::activateAndRefresh(uint16_t rnti, uint32_t formatIdx, ActivationReason reason) {
   activateRNTI(rnti, reason);
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   lastSeen[rnti] = timestamp;
   assocFormatIdx[rnti] = formatIdx;
   rntiManagerLock.unlock();
@@ -219,7 +219,7 @@ uint32_t RNTIManager::getAssociatedFormatIdx(uint16_t rnti) {
 }
 
 ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
-  std::lock_guard<std::mutex> lock(rnti_mutex);
+  // std::lock_guard<std::mutex> lock(rnti_mutex);
   std::map<uint16_t,RNTIActiveSetItem>::const_iterator pos = activeSet.find(rnti);
   if (pos == activeSet.end()) {
       //handle the error
@@ -230,7 +230,7 @@ ActivationReason RNTIManager::getActivationReason(uint16_t rnti) {
 }
 
 vector<rnti_manager_active_set_t> RNTIManager::getActiveSet() {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  // std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   cleanExpired();
   vector<rnti_manager_active_set_t> result(activeSet.size());
   uint32_t index = 0;
@@ -298,7 +298,7 @@ void RNTIManager::getHistogramSummary(uint32_t *buf)
 }
 
 bool RNTIManager::isEvergreen(uint16_t rnti, uint32_t formatIdx) {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  // std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   const vector<Interval>& intervals = evergreen[formatIdx];
   for(vector<Interval>::const_iterator inter = intervals.begin(); inter != intervals.end(); inter++) {
     if(inter->matches(rnti)) return true;
@@ -307,7 +307,7 @@ bool RNTIManager::isEvergreen(uint16_t rnti, uint32_t formatIdx) {
 }
 
 bool RNTIManager::isForbidden(uint16_t rnti, uint32_t formatIdx)  {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  // std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   const vector<Interval>& intervals = forbidden[formatIdx];
   for(vector<Interval>::const_iterator inter = intervals.begin(); inter != intervals.end(); inter++) {
     if(inter->matches(rnti)) return true;
@@ -316,7 +316,7 @@ bool RNTIManager::isForbidden(uint16_t rnti, uint32_t formatIdx)  {
 }
 
 RMValidationResult_t RNTIManager::validateByActiveList(uint16_t rnti, uint32_t formatIdx) {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  // std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   if(active[rnti]) {  // active RNTI
     if(!isExpired(rnti)) {   // lifetime check
       return RMV_TRUE;
@@ -387,7 +387,7 @@ uint32_t RNTIManager::getLikelyDlFormatIdx(uint16_t rnti) {
 }
 
 void RNTIManager::activateRNTI(uint16_t rnti, ActivationReason reason) {
-  std::unique_lock<std::mutex> rntiManagerLock(rntiManagerMutex);
+  // std::unique_lock<std::mutex> rntiManagerLock(rnti_mutex);
   if(!active[rnti]) {
     active[rnti] = true;
     std::unique_lock<std::mutex> lock(rnti_mutex);

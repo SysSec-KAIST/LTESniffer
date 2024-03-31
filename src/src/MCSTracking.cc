@@ -318,7 +318,8 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
     int nof_256qam = 0;
     int nof_unknown = 0;
     int num = 1;
-
+    
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -326,7 +327,8 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
     msg << std::endl;
 
     print_header_ul_mode(msg);
-
+    
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -360,6 +362,7 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
             num++;
         }
     }
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -380,7 +383,7 @@ void MCSTracking::print_database_ul(LTESniffer_stat_writer  *filewriter_obj, int
             }
         }
     }
-
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -432,7 +435,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     int nof_256qam = 0;
     int nof_unknown = 0;
     int num = 1;
-
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -459,7 +462,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
     msg << std::left << std::setw(18) << "DL-UL_delay(us)";
     msg << std::left << std::setw(9) << "Other_Info";
     msg << std::endl;
-
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -631,6 +634,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
             // write_csv_file(iter->first, iter->second, iter->second.mcs_mod);
         }
     }
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -707,7 +711,7 @@ void MCSTracking::print_all_database_ul(LTESniffer_stat_writer  *filewriter_obj,
             }
         }
     }
-
+    msg << "            ";
     for (int i = 0; i < 86; i++)
     {
         msg << "-";
@@ -1085,6 +1089,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
     int nof_unknown = 0;
     int num = 1;
 
+    msg << "            ";
     for (int i = 0; i < 104; i++)
     {
         msg << "-";
@@ -1093,6 +1098,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
 
     print_header(msg);
 
+    msg << "            ";
     for (int i = 0; i < 104; i++)
     {
         msg << "-";
@@ -1116,6 +1122,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
             num++;
         }
     }
+    msg << "            ";
     for (int i = 0; i < 104; i++)
     {
         msg << "-";
@@ -1137,6 +1144,7 @@ void MCSTracking::print_database_dl(LTESniffer_stat_writer  *filewriter_obj, int
         }
     }
 
+    msg << "            ";
     for (int i = 0; i < 104; i++)
     {
         msg << "-";
@@ -1188,7 +1196,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     int nof_256qam = 0;
     int nof_unknown = 0;
     int num = 1;
-
+    msg << "            ";
     for (int i = 0; i < 109; i++)
     {
         msg << "-";
@@ -1219,7 +1227,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
     msg << std::left << std::setw(9) << "W_pinfor";
     msg << std::left << std::setw(9) << "Other ";
     msg << std::endl;
-
+    msg << "            ";
     for (int i = 0; i < 109; i++)
     {
         msg << "-";
@@ -1284,6 +1292,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
             write_csv_file(iter->first, iter->second, iter->second.mcs_table);
         }
     }
+    msg << "            ";
     for (int i = 0; i < 109; i++)
     {
         msg << "-";
@@ -1338,7 +1347,7 @@ void MCSTracking::print_all_database_dl(LTESniffer_stat_writer  *filewriter_obj,
             }
         }
     }
-
+    msg << "            ";
     for (int i = 0; i < 109; i++)
     {
         msg << "-";

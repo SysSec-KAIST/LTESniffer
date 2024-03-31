@@ -71,6 +71,7 @@ void SnifferThread::cancel() {
 void SnifferThread::wait_thread_finish() {
   if(!joined) {
     joined = true;
+    canceled = true;
     // thread::wait_thread_finish();
   }
 }
@@ -92,5 +93,6 @@ void SnifferThread::execute_worker(){
 
 void SnifferThread::run_thread() {
   /*create a new async thread to execute subframe worker*/
+  // std::cout << "SnifferThread ready" << std::endl;
   thread_return = async(std::launch::async, [this]{ this->execute_worker();});
 }

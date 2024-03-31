@@ -100,7 +100,7 @@ void Phy::putPending(std::shared_ptr<SubframeWorker> buffer) {
 
 // Wait until pending queue has been processed entirely and workerThread finished his work
 void Phy::joinPending() {
-  pending.waitEmpty();                        // wait empty queue
+  // pending.waitEmpty();                        // wait empty queue
   for (auto i = 0; i< nof_workers; i++){
     sniffer_thread.at(i)->cancel();                // mark worker thread as disabled
   }

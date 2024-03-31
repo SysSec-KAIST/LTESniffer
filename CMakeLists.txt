@@ -176,8 +176,8 @@ else(SRSRAN_FOUND AND NOT FORCE_SUBPROJECT_SRSRAN)
   message("Download SRSRAN as a subproject and build it.")
 
   # Download and unpack srsRAN at configure time
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-src")
-  file(COPY "${CMAKE_SOURCE_DIR}/srsRAN_4G_mirror/" DESTINATION "${CMAKE_BINARY_DIR}/srsRAN-src")
+  # file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-src")
+  # file(COPY "${CMAKE_SOURCE_DIR}/srsRAN_4G_mirror/" DESTINATION "${CMAKE_BINARY_DIR}/srsRAN-src")
 
   configure_file(external/cmake/srsRAN.CMakeLists.txt.in srsRAN-download/CMakeLists.txt)
   execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .

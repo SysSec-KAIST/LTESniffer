@@ -69,8 +69,8 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
     }
   }
 
-  std::string stat_folder = "/home/stats/";
-  filewriter_objs[FILE_IDX_CONTROL]->open((stat_folder + "LETTUCE_control_" + str_cur_time + "ansi")); 
+  std::string stat_folder = "";
+  filewriter_objs[FILE_IDX_CONTROL]->open((stat_folder + "LTESniffer_control_" + ".ansi")); 
   std::stringstream control_msg_contruct;
 
   control_msg_contruct << "\nLTESniffer_Core: Starting...\n\n";
@@ -98,20 +98,20 @@ LTESniffer_Core::LTESniffer_Core(const Args& args):
       mkdir(stat_folder.c_str(), 0700);
   }
 
-  std::string error_filename = stat_folder + "LETTUCE_stderr_" + str_cur_time + "ansi";
+  std::string error_filename = stat_folder + "LTESniffer_stderr_log" +  "ansi";
   errfile = freopen(error_filename.c_str(),"w",stderr);
 
-  std::string out_filename = stat_folder + "LETTUCE_stdout_" + str_cur_time + "ansi";
+  std::string out_filename = stat_folder + "LTESniffer_stdout_log" + "ansi";
   // this will do the same format on command line with tee 
-  //    date +"LETTUCE_stdout_%a_%b__%-d_%H.%M.%S_%Y.ansi"
+  //    date +"LTESniffer_stdout_%a_%b__%-d_%H.%M.%S_%Y.ansi"
   //    outfile = freopen(out_filename.c_str(),"w",stdout);
 
-  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LETTUCE_api_" + str_cur_time + "ansi")); 
-  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LETTUCE_dl_tab_" + str_cur_time + "ansi")); 
-  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LETTUCE_dl_dci_" + str_cur_time + "ansi")); 
-  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LETTUCE_ul_tab_" + str_cur_time + "ansi")); 
-  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LETTUCE_ul_dci_" + str_cur_time + "ansi")); 
-  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LETTUCE_rar_" + str_cur_time + "ansi")); 
+  filewriter_objs[FILE_IDX_API]->open((stat_folder + "LTESniffer_api_log" + ".ansi")); 
+  filewriter_objs[FILE_IDX_DL]->open((stat_folder + "LTESniffer_dl_tab_log" +  ".ansi")); 
+  filewriter_objs[FILE_IDX_DL_DCI]->open((stat_folder + "LTESniffer_dl_dci_log" + ".ansi")); 
+  filewriter_objs[FILE_IDX_UL]->open((stat_folder + "LTESniffer_ul_tab_log" + ".ansi")); 
+  filewriter_objs[FILE_IDX_UL_DCI]->open((stat_folder + "LTESniffer_ul_dci_log" + ".ansi")); 
+  // filewriter_objs[FILE_IDX_RAR]->open((stat_folder + "LTESniffer_rar_" + str_cur_time + "ansi")); 
 
   /*Init HARQ*/
   harq.init_HARQ(args.harq_mode);
@@ -600,10 +600,11 @@ bool LTESniffer_Core::run(){
         }else{
           cur_time_second = "";
         }
-
-        control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
-        control_msg << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
-        control_msg << "Skipped subframes: " << skip_cnt << " (" << static_cast<double>(skip_cnt) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
+        if (api_mode == -1){ // only print if not in API mode
+          control_msg << "[" << cur_time_second << "] Processed " << (1000 - skip_last_1s) << "/1000 subframes" << "\n";
+        }
+        // control_msg << "Skipped subframe: " << skip_cnt << " / " << sf_cnt << endl;
+        // control_msg << "Skipped subframes: " << skip_last_1s << " (" << static_cast<double>(skip_last_1s) * 100 / (phy->getCommon().getStats().nof_subframes + skip_cnt) << "%)" <<  endl;
         write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
         control_msg.str(std::string());
 
@@ -683,16 +684,16 @@ bool LTESniffer_Core::run(){
         nof_lost_sync = 0;
       }
       
-      if(srsran_sync_get_peak_value(&ue_sync.sfind) > srsran_sync_get_threshold(&ue_sync.sfind)){
+      // if(srsran_sync_get_peak_value(&ue_sync.sfind) > srsran_sync_get_threshold(&ue_sync.sfind)){
         control_msg << "Found PSS... NID2: "  << cell.id % 3 <<
                 ", Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
-                ", Threshold: " << srsran_sync_get_threshold(&ue_sync.sfind) <<
+                // ", Threshold: " << srsran_sync_get_threshold(&ue_sync.sfind) <<
                 ", FrameCnt: " << ue_sync.frame_total_cnt <<
                 " State: " << ue_sync.state << endl;
         control_msg << "Missed PSS Attempts: " << nof_lost_sync << endl;
         write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
         control_msg.str(std::string());
-      }
+      // }
       nof_lost_sync++;
       // cout << "Finding PSS... Peak: " << srsran_sync_get_peak_value(&ue_sync.sfind) <<
       //         ", FrameCnt: " << ue_sync.frame_total_cnt <<
@@ -747,11 +748,6 @@ bool LTESniffer_Core::run(){
   write_file_and_console(control_msg.str(), filewriter_objs[FILE_IDX_CONTROL]);
   control_msg.str(std::string());
 
-  /* Print statistic of 256tracking*/
-  // if (mcs_tracking_mode){ mcs_tracking.print_database_ul(); }
-
-  /* Print statistic of harq retransmission*/
-  //if (harq_mode){ harq.printHARQDatabase(); }
   return EXIT_SUCCESS;
 }
 
@@ -820,7 +816,7 @@ void LTESniffer_Core::setRNTIThreshold(int val){
 
 void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
   std::stringstream msg_api;
-
+  msg_api << "            ";
   for (int i = 0; i < 90; i++){
       msg_api << "-";
   }
@@ -843,6 +839,7 @@ void LTESniffer_Core::print_api_header(LTESniffer_stat_writer  *filewriter_obj){
   msg_api << std::left << std::setw(11) <<  "RNTI";  
   msg_api << std::left << std::setw(25) <<  "From Message";
   msg_api << std::endl;
+  msg_api << "            ";
   for (int i = 0; i < 90; i++){
       msg_api << "-";
   }

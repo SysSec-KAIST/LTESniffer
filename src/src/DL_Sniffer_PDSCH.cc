@@ -110,7 +110,7 @@ int PDSCH_Decoder::decode_imsi_tmsi_paging(uint8_t *sdu_ptr, int length)
 						mcs_tracking->increase_nof_api_msg();
 						ret = SRSRAN_SUCCESS;
 					}
-					print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING);
+					// print_api_dl(dl_sf->tti, 65534, ID_IMSI, imsi_str, MSG_PAGING);
 					// printf("Found IMSI paging\n");
 					ret = SRSRAN_SUCCESS;
 				}
@@ -318,7 +318,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 							std::stringstream ss;
 							ss << std::hex << std::setw(8) << std::setfill('0') << pdu_info.tmsi;
 							std::string tmsi_str = ss.str();
-							print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG);
+							print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG, -1);
 						}
 					}
 					else
@@ -393,7 +393,7 @@ int PDSCH_Decoder::decode_ul_mode(uint32_t rnti, std::vector<DL_Sniffer_rar_resu
 				float ta_min = (float) result.ta * 78.12; // ref: https://howltestuffworks.blogspot.com/2014/07/timing-advance-and-time-alignment-timer.html
 				float ta_max = (float) (result.ta + 1) * 78.12; // meters multiply by 78 meters for shortcut
 				// {min}-{max} meters ... TA_RNTI does not change per user, does per carrier?
-				std:string ta_str = std::to_string((int) ta_min) + " to " + std::to_string((int) ta_max) + " m";
+				std:string ta_str = std::to_string((int) result.ta) ; // + " to " + std::to_string((int) ta_max) + " m"
 				if (api_mode == 0 || api_mode == 3){
 					print_api_dl(dl_sf->tti, result.t_crnti, MSG_RAR, ta_str, MSG_RAR, cur_rnti);
 					//print_api_dl(dl_sf->tti, cur_rnti, MSG_RAR, ta_str, MSG_RAR);
@@ -845,7 +845,7 @@ void PDSCH_Decoder::run_api_dl_mode(std::string RNTI_name, uint8_t *pdu, uint32_
 					std::stringstream ss;
 					ss << std::hex << std::setw(8) << std::setfill('0') << pdu_info.tmsi;
 					std::string tmsi_str = ss.str();
-					print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG);
+					print_api_dl(tti, cur_rnti, ID_TMSI, tmsi_str, MSG_CON_RECONFIG, -1);
 					mcs_tracking->increase_nof_api_msg();
 				}
 			}else{
@@ -865,7 +865,7 @@ void PDSCH_Decoder::run_api_dl_mode(std::string RNTI_name, uint8_t *pdu, uint32_
 						std::string con_res_str = temp_con_res_str.substr(3, 8);
 						// printf("[API] SF: %d-%d Found RRC Connection Setup, Contention Resolution = %s, RNTI = %d \n",
 						// 		tti/10, tti%10, con_res_str.c_str(), cur_rnti);
-						print_api_dl(tti, cur_rnti, ID_CON_RES, con_res_str, MSG_CON_SET);
+						print_api_dl(tti, cur_rnti, ID_CON_RES, con_res_str, MSG_CON_SET, -1);
 						mcs_tracking->increase_nof_api_msg();
 						found_res = true;
 					}
@@ -1073,7 +1073,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								run_api_dl_mode(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, tb);
 							}
 						}
-						if (cur_rnti != 65535 && cur_grant->tb[tb].enabled && (target_rnti == 0 || cur_rnti == target_rnti) && en_debug)
+						if (cur_rnti != 65535 && cur_grant->tb[tb].enabled && (target_rnti == 0 || cur_rnti == target_rnti) && (en_debug || FILE_WRITE))
 						{
 							print_debug_dl(table_name, tti, decoding_mem.rnti, dci_fm, mod, decoding_mem.ran_dci_dl->tb[0].mcs_idx, harq_ret[tb],
 										   nof_tb, result_length, pdsch_res[tb].crc, &falcon_ue_dl->q->chest_res);
@@ -1340,7 +1340,7 @@ void PDSCH_Decoder::print_debug_dl(std::string name,
 		msg << std::left << std::setw(8) << RED << "FAILED";
 	}
 	msg << RESET << std::endl;
-	if(DEBUG_DCI_PRINT==1){
+	if(en_debug){
 		std::cout << msg.str();
 	}
 	if(FILE_WRITE==1){
@@ -1488,6 +1488,8 @@ std::string convert_msg_name_dl(int msg)
 	case 6:
 		ret = "Random Access Response";
 		break;
+	case 7:
+		ret = "RRC Reconfiguration";
 	default:
 		ret = "-";
 		break;
@@ -1516,9 +1518,9 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 	msg_api << std::left << std::setw(11) << rnti;
 	std::string msg_name = convert_msg_name_dl(msg);
 	msg_api << std::left << std::setw(25) << msg_name;
-	if(ta_rnti!=-1){
-		msg_api << std::left << std::setw(2) << "{" << ta_rnti << "}";
-	}
+	// if(ta_rnti!=-1){
+	// 	msg_api << std::left << std::setw(2) << "{" << ta_rnti << "}";
+	// }
 	msg_api << std::endl;
 
 	if(DEBUG_SEC_PRINT==1){
