@@ -206,10 +206,10 @@ bool LTESniffer_Core::run(){
       //set up cell manually
       cell.nof_prb          = args.nof_prb;
       cell.id               = args.cell_id;
-      cell.nof_ports        = 2;
+      cell.nof_ports        = args.file_nof_ports;
       cell.cp               = SRSRAN_CP_NORM;
       cell.phich_length     = SRSRAN_PHICH_NORM;
-      cell.phich_resources  = SRSRAN_PHICH_R_1_6;
+      cell.phich_resources  = (srsran_phich_r_t)args.phich_resources;
     }
     srsran_rf_stop_rx_stream(&rf);
     // srsran_rf_flush_buffer(&rf);

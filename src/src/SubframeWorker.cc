@@ -171,7 +171,7 @@ void SubframeWorker::work()
   case DL_MODE:
     snr_ret = dciSearch.search();
     if (snr_ret == SRSRAN_SUCCESS)
-    {                                        // only decode when SNR > 5 dB
+    {                                        // only decode when SNR > 1 dB
       stats += dciSearch.getStats();         // worker-specific statistics
       common.addStats(dciSearch.getStats()); // common statistics
       run_dl_mode(subframeInfo);
@@ -185,7 +185,7 @@ void SubframeWorker::work()
     dciSearch.prepareDCISearch(); // set single antenna for DL in the UL Sniffer mode
     snr_ret = dciSearch.search();
     if (snr_ret == SRSRAN_SUCCESS)
-    {                                        // only decode when SNR > 5 dB
+    {                                        // only decode when SNR > 1 dB
       stats += dciSearch.getStats();         // worker-specific statistics
       common.addStats(dciSearch.getStats()); // common statistics
       subframeInfo.getSubframePower().computePower(enb_ul.sf_symbols);

@@ -27,6 +27,7 @@ void ArgManager::defaultArgs(Args& args) {
   args.nof_prb = DEFAULT_NOF_PRB;
   args.file_nof_prb = DEFAULT_NOF_PRB;
   args.file_nof_ports = DEFAULT_NOF_PORTS;
+  args.phich_resources = SRSRAN_PHICH_R_1_6;
   args.file_cell_id = 0;
   args.file_wrap = false;
   args.rf_args = "";
@@ -81,6 +82,7 @@ void ArgManager::usage(Args& args, const std::string& prog) {
   printf("\t-o offset frequency correction (in Hz) for input file [Default %.1f Hz]\n", args.file_offset_freq);
   printf("\t-O offset samples for input file [Default %d]\n", args.file_offset_time);
   printf("\t-P nof_ports for input file [Default %d]\n", args.file_nof_ports);
+  printf("\t-H phich_resource for specifying a cell [Default %d]\n", args.phich_resources);
   printf("\t-c cell_id for input file [Default %d]\n", args.file_cell_id);
   printf("\t-C Enable cell search, default disable, \n");
   printf("\t-C Disable CFO correction [Default %s]\n", args.disable_cfo ? "Disabled" : "Enabled");
@@ -121,9 +123,9 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
       case 'L':
         args.enable_shortcut_discovery = false;
         break;
-      case 'H':
-        args.rnti_histogram_threshold = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
-        break;
+      // case 'H':
+      //   args.rnti_histogram_threshold = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
+      //   break;
       case 'i':
         args.input_file_name = argv[optind];
         break;
@@ -150,6 +152,9 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
       case 'p':
         args.nof_prb = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
         args.file_nof_prb = args.nof_prb;
+        break;
+      case 'H':
+        args.phich_resources = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
         break;
       case 'P':
         args.file_nof_ports = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
