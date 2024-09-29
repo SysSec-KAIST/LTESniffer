@@ -173,35 +173,29 @@ example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 1 -z 3
 ```
 ### Specify a base station
 
-LTESniffer can sniff traffic on a fixed base station by using options ``-I <Phycial Cell ID (PCI)> -p <number of Physical Resource Block (PRB)> -P <number of ports> -H <PHICH Resources>``. In this case, LTESniffer will not search for the best cell but connect directly to the specified one. 
+LTESniffer can sniff traffic on a fixed base station by using options ``-I <Phycial Cell ID (PCI)>``. In this case, LTESniffer will not search for the best cell but connect directly to the specified one. 
 
-In order to get configurations (PCI, number of PRB, number of ports, PHICH resources) for command line input, you need to initially run LTESniffer with cell search mode (by using ``-C``). The result of this initial cell search will give you correct information, for example:
+In order to get Cell ID (PCI) for command line input, you need to initially run LTESniffer with cell search mode (by using ``-C``). The result of this initial cell search will give you correct information, for example:
 
 ```bash
 sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 0
  - Type:            FDD
  - PCI:             1       -------> -I 1
- - Nof ports:       2       -------> -P 2
+ - Nof ports:       2       
  - CP:              Normal
- - PRB:             100     -------> -p 100
+ - PRB:             100     
  - PHICH Length:    Normal
- - PHICH Resources: 1/6     -------> -H 0
+ - PHICH Resources: 1/6     
  - SFN:             4
 Decoded MIB. SFN: 4, offset: 0
 ```
-For the result above, the command line input should be `` -I 1 -p 100 -P 2 -H 0``.
-Note that there are 4 options for PHICH Resources:
-+ PHICH Resources: 1/6 -------> -H 0
-+ PHICH Resources: 1/2 -------> -H 1
-+ PHICH Resources: 1   -------> -H 2
-+ PHICH Resources: 2   -------> -H 3
-
+For the result above, the command line input should be `` -I 1``.
 The full command for specifying a base station is as follows:
 
 ```bash
-sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -I <PCI> -p <PRB> -P <nof_Ports> -H <PHICH> -m 0
-sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <UL Freq> -I <PCI> -p <PRB> -P <nof_Ports> -H <PHICH> -m 1
-example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -I 1 -p 100 -P 2 -H 0 -m 1
+sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -I <PCI> -m 0
+sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <UL Freq> -I <PCI> -m 1
+example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -I 1 -m 1
 ```
 The debug mode can be enabled by using option ``-d``. In this case, the debug messages will be printed on the terminal.
 

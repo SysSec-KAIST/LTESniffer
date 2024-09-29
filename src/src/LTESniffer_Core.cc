@@ -115,6 +115,7 @@ bool LTESniffer_Core::run(){
   srsran_dl_sf_cfg_t dl_sf;
   srsran_pdsch_cfg_t pdsch_cfg;
   srsran_ue_sync_t   ue_sync;
+  bool               update_cell_worker = false;   
 
 #ifndef DISABLE_RF
   srsran_rf_t rf;             // to open RF devices
@@ -204,12 +205,24 @@ bool LTESniffer_Core::run(){
       } while (ret == 0 && !go_exit);
     } else{
       //set up cell manually
-      cell.nof_prb          = args.nof_prb;
-      cell.id               = args.cell_id;
-      cell.nof_ports        = args.file_nof_ports;
-      cell.cp               = SRSRAN_CP_NORM;
-      cell.phich_length     = SRSRAN_PHICH_NORM;
-      cell.phich_resources  = (srsran_phich_r_t)args.phich_resources;
+      // cell.nof_prb          = args.nof_prb;
+      // cell.id               = args.cell_id;
+      // cell.nof_ports        = args.file_nof_ports;
+      // cell.cp               = SRSRAN_CP_NORM;
+      // cell.phich_length     = SRSRAN_PHICH_NORM;
+      // cell.phich_resources  = (srsran_phich_r_t)args.phich_resources;
+      printf("Searching for specific cell ID PCI = %d...\n", args.cell_id);
+      do {
+        uint32_t ntrial = 0;
+        ret = rf_search_and_decode_mib_cell_id(
+            &rf, args.rf_nof_rx_ant, &cell_detect_config, args.cell_id, &cell, &search_cell_cfo);
+        if (ret < 0) {
+          ERROR("Error searching for cell");
+          exit(-1);
+        } else if (ret == 0 && !go_exit) {
+          printf("Cell PCI = %d not found after %d trials. Trying again (Press Ctrl+C to exit)\n", args.cell_id, ntrial++);
+        }
+      } while (ret == 0 && !go_exit);
     }
     srsran_rf_stop_rx_stream(&rf);
     // srsran_rf_flush_buffer(&rf);
