@@ -263,7 +263,7 @@ void PUSCH_Decoder::decode_run(std::string info, DCI_UL &decoding_mem, std::stri
     }
 
     /*Only print debug when SNR of RNTI >= 1 */
-    if ((en_debug) && (enb_ul.chest_res.snr_db >= 1))
+    if ((en_debug) && (enb_ul.chest_res.snr_db >= 0.5))
     { //|| target_rnti !=0
         float signal_power = enb_ul.chest_res.snr_db;
         float falcon_signal_power = 0.0f;

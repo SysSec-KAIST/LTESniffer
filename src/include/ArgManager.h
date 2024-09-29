@@ -20,9 +20,10 @@ struct Args {
   double      file_offset_freq;
   uint32_t    nof_prb;
   uint32_t    file_nof_prb;
-  uint32_t    file_nof_ports;
+  uint32_t    file_nof_ports = 2;
   uint32_t    file_cell_id;
   bool        file_wrap;
+  int         phich_resources = 0;
   std::string rf_args;
   uint32_t    rf_nof_rx_ant;
   double      rf_freq;
