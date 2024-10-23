@@ -53,8 +53,6 @@ Achieving real-time decoding of LTE traffic requires a high-performance CPU with
 ### SDR
 LTESniffer requires different SDR for its uplink and downlink sniffing modes.
 
-To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). The SDR should be connected to the PC via a USB 3.0 port. Also, it should be equipped with two RX antennas to decode downlink messages in transmission modes 3 and 4. If your SDR only has 1 RX antenna, LTESniffer will only decode downlink message in transmission mode 1. Note that GPSDO is optional for downlink sniffing, it will help improve the synchronization but is not mandatory. 
-
 To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). 
 The SDR should be connected to the PC via a USB 3.0 port. Additionally, it should be equipped with two RX antennas to decode downlink messages in transmission modes 3 and 4. 
 If your SDR only has one RX antenna, LTESniffer will only decode downlink messages in transmission mode 1. Note that GPSDO is optional for downlink sniffing; it will help improve synchronization but is not mandatory.
