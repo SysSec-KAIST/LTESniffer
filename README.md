@@ -53,11 +53,15 @@ Achieving real-time decoding of LTE traffic requires a high-performance CPU with
 ### SDR
 LTESniffer requires different SDR for its uplink and downlink sniffing modes.
 
-To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). The SDR should be connected to the PC via a USB 3.0 port. Also, it should be equipped with GPSDO and two RX antennas to decode downlink messages in transmission modes 3 and 4.
+To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). The SDR should be connected to the PC via a USB 3.0 port. Also, it should be equipped with two RX antennas to decode downlink messages in transmission modes 3 and 4. If your SDR only has 1 RX antenna, LTESniffer will only decode downlink message in transmission mode 1. Note that GPSDO is optional for downlink sniffing, it will help improve the synchronization but is not mandatory. 
+
+To sniff only downlink traffic from the base station, LTESniffer is compatible with most SDRs that are supported by the srsRAN library (for example, USRP or BladeRF). 
+The SDR should be connected to the PC via a USB 3.0 port. Additionally, it should be equipped with two RX antennas to decode downlink messages in transmission modes 3 and 4. 
+If your SDR only has one RX antenna, LTESniffer will only decode downlink messages in transmission mode 1. Note that GPSDO is optional for downlink sniffing; it will help improve synchronization but is not mandatory.
 
 On the other hand, to sniff uplink traffic from smartphones to base stations, LTESniffer needs to listen to two different frequencies (Uplink and Downlink) concurrently. To solve this problem, LTESniffer supports two options:
-- Using a single USRP X310. USRP X310 has two Local Oscillators (LOs) for 2 RX channels, which can turn each RX channel to a distinct Uplink/Downlink frequency. To use this option, please refer to the `main` branch of LTESniffer.
-- Using 2 USRP B-Series. LTESniffer utilizes 2 USRP B-series (B210/B200) for uplink and downlink separately. It achieves synchronization between 2 USRPs by using GPSDO for clock source and time reference. To use this option, please refer to the `LTESniffer-multi-usrp` branch of LTESniffer and its [README][multi-readme].
+- Using a single USRP X310. USRP X310 has two Local Oscillators (LOs) for 2 RX channels, which can turn each RX channel to a distinct Uplink/Downlink frequency. Similar to Downlink Sniffing, GPSDO is optional for this option. To use this option, please refer to the `main` branch of LTESniffer.
+- Using 2 USRP B-Series. LTESniffer utilizes 2 USRP B-series (B210/B200) for uplink and downlink separately. It achieves synchronization between 2 USRPs by using GPSDO for clock source and time reference. GPSDO is mandatory for this option. To use this option, please refer to the `LTESniffer-multi-usrp` branch of LTESniffer and its [README][multi-readme].
 
 ## Installation
 **Important note: To avoid unexpected errors, please follow the following steps on Ubuntu 18.04/20.04/22.04.**
@@ -247,6 +251,11 @@ Please refer to our [paper][paper] for more details.
   year = {2023}
 }
 ```
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SysSec-KAIST/LTESniffer&type=Date)](https://star-history.com/#SysSec-KAIST/LTESniffer&Date)
+
 ## FAQ
 
 <!-- **Q:** What kind of SDRs I can use to run LTESniffer? \
