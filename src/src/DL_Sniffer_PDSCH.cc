@@ -241,7 +241,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 				bool is_rrc_connection_setup = false;
 
 				int subh_idx = 0;
-				sch_subh sub_header[4];
+				sch_subh sub_header[10];
 				bool found_res = false;
 				while (pdu.next() && !found_res)
 				{
@@ -266,8 +266,12 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 					}
 					else
 					{
-						sub_header[subh_idx] = *pdu.get();
-						subh_idx++;
+						if (subh_idx < 10){
+							sub_header[subh_idx] = *pdu.get();
+							subh_idx++;
+						}else{
+							break;
+						}
 					}
 					if (is_rrc_connection_setup && (api_mode == 0 || api_mode == 3))
 					{
@@ -912,7 +916,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								pdu.parse_packet(pdsch_res[tb].payload);
 								bool is_rrc_connection_setup = false;
 								int subh_idx = 0;
-								sch_subh sub_header[4];
+								sch_subh sub_header[10];
 								while (pdu.next())
 								{
 									if (pdu.get()->is_sdu())
@@ -999,7 +1003,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								pdu.parse_packet(pdsch_res[tb].payload);
 								bool is_rrc_connection_setup = false;
 								int subh_idx = 0;
-								sch_subh sub_header[4];
+								sch_subh sub_header[10];
 								while (pdu.next())
 								{
 									if (pdu.get()->is_sdu())
