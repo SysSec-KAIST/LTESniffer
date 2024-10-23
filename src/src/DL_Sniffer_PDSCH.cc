@@ -282,7 +282,7 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 				bool is_rrc_connection_setup = false;
 
 				int subh_idx = 0;
-				sch_subh sub_header[4];
+				sch_subh sub_header[10];
 				bool found_res = false;
 				while (pdu.next() && !found_res)
 				{
@@ -319,12 +319,16 @@ int PDSCH_Decoder::run_decode(int &mimo_ret,
 					}
 					else
 					{
-						sub_header[subh_idx] = *pdu.get();
-						subh_idx++;
+						if (subh_idx < 10){
+							sub_header[subh_idx] = *pdu.get();
+							subh_idx++;
+						}else{
+							break;
+						}
 					}
 					if (is_rrc_connection_setup && (api_mode == 0 || api_mode == 3))
 					{
-						for (int h = 0; h < 4 && !found_res; h++)
+						for (int h = 0; h < subh_idx && !found_res; h++)
 						{
 							if ((dl_sch_lcid)sub_header[h].lcid_value() == dl_sch_lcid::CON_RES_ID)
 							{
@@ -814,7 +818,7 @@ void PDSCH_Decoder::run_api_dl_mode(std::string RNTI_name, uint8_t *pdu, uint32_
 		pdu.parse_packet(pdsch_res[tb].payload);
 		bool is_rrc_connection_setup = false;
 		int subh_idx = 0;
-		sch_subh sub_header[4];
+		sch_subh sub_header[10];
 		bool found_res = false;
 		while (pdu.next())
 		{
@@ -843,12 +847,16 @@ void PDSCH_Decoder::run_api_dl_mode(std::string RNTI_name, uint8_t *pdu, uint32_
 					mcs_tracking->increase_nof_api_msg();
 				}
 			}else{
-				sub_header[subh_idx] = *pdu.get();
-				subh_idx++;
+				if (subh_idx < 10){
+					sub_header[subh_idx] = *pdu.get();
+					subh_idx++;
+				}else{
+					break;
+				}
 			}
 			if (is_rrc_connection_setup && (api_mode == 0 || api_mode == 3))
 			{
-				for (int h = 0; h < 4 && !found_res; h++)
+				for (int h = 0; h < subh_idx && !found_res; h++)
 				{
 					if ((dl_sch_lcid)sub_header[h].lcid_value() == dl_sch_lcid::CON_RES_ID)
 					{
@@ -1038,7 +1046,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								pdu.parse_packet(pdsch_res[tb].payload);
 								bool is_rrc_connection_setup = false;
 								int subh_idx = 0;
-								sch_subh sub_header[4];
+								sch_subh sub_header[10];
 								while (pdu.next())
 								{
 									if (pdu.get()->is_sdu() && pdu.get()->get_sdu_lcid() == 0)
@@ -1130,7 +1138,7 @@ int PDSCH_Decoder::decode_dl_mode()
 								pdu.parse_packet(pdsch_res[tb].payload);
 								bool is_rrc_connection_setup = false;
 								int subh_idx = 0;
-								sch_subh sub_header[4];
+								sch_subh sub_header[10];
 								while (pdu.next())
 								{
 									if (pdu.get()->is_sdu())

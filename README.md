@@ -235,8 +235,9 @@ We sincerely appreciate the [FALCON][falcon] and [SRS team][srsran] for making t
 ## Contributor
 Special thanks to all the contributors who helped us to fix bugs and improve LTESniffer
 
-1. [@cellular777][cellular77]
+1. [cellular777][cellular77]
 2. [Cemaxecuter][Cemaxecuter]
+3. [Ksk190809][Ksk190809]
 
 ## BibTex
 Please refer to our [paper][paper] for more details.
@@ -286,3 +287,4 @@ To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards
 [capture-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-record-subframe
 [cellular77]: https://github.com/cellular777
 [Cemaxecuter]: https://www.youtube.com/@cemaxecuter7783
+[Ksk190809]: https://github.com/Ksk190809
