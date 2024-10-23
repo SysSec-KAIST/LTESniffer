@@ -280,7 +280,7 @@ To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards
 [uhd]:    https://github.com/EttusResearch/uhd
 [paper]:  https://syssec.kaist.ac.kr/pub/2023/wisec2023_tuan.pdf
 [pcap]:   pcap_file_example/README.md
-[app]:    https://play.google.com/store/apps/details?id=make.more.r2d2.cellular_z&hl=en&gl=US&pli=1
+[app]:    https://apkpure.com/cellular-z/make.more.r2d2.cellular_z
 [watching]: https://syssec.kaist.ac.kr/pub/2022/sec22summer_bae.pdf
 [multi-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-multi-usrp
 [capture-readme]: https://github.com/SysSec-KAIST/LTESniffer/tree/LTESniffer-record-subframe
