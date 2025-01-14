@@ -6,7 +6,7 @@
 It first decodes the Physical Downlink Control Channel (PDCCH) to obtain the Downlink Control Informations (DCIs) and Radio Network Temporary Identifiers (RNTIs) of all active users. Using decoded DCIs and RNTIs, LTESniffer further decodes the Physical Downlink Shared Channel (PDSCH) and Physical Uplink Shared Channel (PUSCH) to retrieve uplink and downlink data traffic.
 
 LTESniffer supports an API with three functions for security applications and research. Many LTE security research assumes
-a passive sniffer that can capture privacy-related packets on the air. However, non of the current open-source sniffers satisfy their requirements as they cannot decode protocol packets in PDSCH and PUSCH. We developed a proof-of-concept security API that supports three tasks that were proposed by previous works: 1) Identity mapping, 2) IMSI collecting, and 3) Capability profiling.
+a passive sniffer that can capture privacy-related packets on the air. However, none of the current open-source sniffers satisfy their requirements as they cannot decode protocol packets in PDSCH and PUSCH. We developed a proof-of-concept security API that supports three tasks that were proposed by previous works: 1) Identity mapping, 2) IMSI collecting, and 3) Capability profiling.
 
 Please refer to our [paper][paper] for more details.
 
@@ -262,7 +262,7 @@ Please refer to our [paper][paper] for more details.
 To sniff the uplink traffic, LTESniffer requires USRP X310 with 2 daughterboards. There are two reasons for this. First, sniffing the uplink traffic requires precise time synchronization between uplink and downlink subframes, which can be simply achieved by using two daughterboards with the same clock source from a single motherboard of USRP X310. Second, the "srsran_rf_set_rx_freq" function used by LTESniffer seems to only support the USRP X310 with 2 daughterboards for simultaneous reception of signals at two different frequencies. -->
 
 **Q:** Is it mandatory to use GPSDO with the USRP in order to run LTESniffer? \
-**A:** GPSDO is useful for more stable synchronization. However, for downlink sniffing mode, LTESniffer still can synchronize with the LTE signal to decode the packets without GPSDO. For uplink sniffing mode, GPSDO is only required when using 2 USRP B-series, as it is the time and clock reference sources for synchrozation between uplink and downlink channels. Another uplink SDR option, using a single USRP X310, does not require GPSDO.
+**A:** GPSDO is useful for more stable synchronization. However, for downlink sniffing mode, LTESniffer still can synchronize with the LTE signal to decode the packets without GPSDO. For uplink sniffing mode, GPSDO is only required when using 2 USRP B-series, as it is the time and clock reference sources for synchronization between uplink and downlink channels. Another uplink SDR option, using a single USRP X310, does not require GPSDO.
 
 **Q:** For downlink traffic, can I use a cheaper SDR? \
 **A:** Technically, any SDRs supported by srsRAN library such as Blade RF can be used to run LTESniffer in the downlink sniffing mode. However, we only tested the downlink sniffing function of LTESniffer with USRP B210 and X310. 
