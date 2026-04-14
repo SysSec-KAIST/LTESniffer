@@ -14,7 +14,8 @@ Phy::Phy(uint32_t nof_rx_antennas,
          HARQ *harq,
          int mcs_tracking_mode,
          int harq_mode,
-         ULSchedule *ulsche):
+         ULSchedule *ulsche,
+         double dl_dci_min_snr_db):
   nof_rx_antennas(nof_rx_antennas),
   nof_workers(nof_workers),
   workers(),
@@ -37,7 +38,8 @@ Phy::Phy(uint32_t nof_rx_antennas,
                                                               mcs_tracking_mode,
                                                               harq_mode,
                                                               ulsche,
-                                                              mcs_tracking->get_sniffer_mode()));
+                                                              mcs_tracking->get_sniffer_mode(),
+                                                              dl_dci_min_snr_db));
     workers.push_back(worker);
     avail.enqueue(worker);
   }

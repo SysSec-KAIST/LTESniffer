@@ -20,6 +20,8 @@ void ArgManager::defaultArgs(Args& args) {
   args.time_offset = 0;
   args.force_N_id_2 = -1; // Pick the best
   args.input_file_name = "";
+  args.input_file_raw_sync = false;
+  args.input_file_raw_sc16 = false;
   args.dci_file_name = "";
   args.stats_file_name = "";
   args.file_offset_time = 0;
@@ -29,6 +31,7 @@ void ArgManager::defaultArgs(Args& args) {
   args.file_nof_ports = DEFAULT_NOF_PORTS;
   args.file_cell_id = 0;
   args.file_wrap = false;
+  args.raw_iq_output_file = "";
   args.rf_args = "";
   args.rf_freq = -1.0;
   args.ul_freq = 0;
@@ -54,6 +57,7 @@ void ArgManager::defaultArgs(Args& args) {
   args.rf_args = "";
   args.verbose = 0;
   args.enable_cfo_ref = 1;
+  args.dl_dci_min_snr_db = 6.0;
   args.estimator_alg = "interpolate";
   args.cell_search = false;
   args.cell_id = 0;
@@ -64,7 +68,7 @@ void ArgManager::defaultArgs(Args& args) {
 }
 
 void ArgManager::usage(Args& args, const std::string& prog) {
-  printf("Usage: %s [aAcCDdEfghHilLnpPrRsStTvwWyYqFIuUmOoz] -f rx_frequency (in Hz) | -i input_file\n", prog.c_str());
+  printf("Usage: %s [aAcCDdEfGghHijlJLnpPQrRsStTvwWyYqFIuUmOoz] -f rx_frequency (in Hz) | -i input_file\n", prog.c_str());
   printf("\t-h show this help message\n");
 #ifndef DISABLE_RF
   printf("\t-a RF args [Default %s]\n", args.rf_args.c_str());
@@ -78,9 +82,13 @@ void ArgManager::usage(Args& args, const std::string& prog) {
 #endif
   printf("\t-i input_file [Default use RF board] (default disable)\n");
   printf("\t-D output filename for DCI [default stdout]\n");
+  printf("\t-G minimum DL DCI search SNR in dB for offline replay [Default %.1f]\n", args.dl_dci_min_snr_db);
+  printf("\t-j treat -i as generic raw IQ and synchronize it before decoding [Default disabled]\n");
+  printf("\t-J raw -i/-j input is interleaved sc16 instead of cf32 [Default disabled]\n");
   printf("\t-o offset frequency correction (in Hz) for input file [Default %.1f Hz]\n", args.file_offset_freq);
   printf("\t-O offset samples for input file [Default %d]\n", args.file_offset_time);
   printf("\t-P nof_ports for input file [Default %d]\n", args.file_nof_ports);
+  printf("\t-Q output live raw IQ capture to cf32 file while decoding [Default disabled]\n");
   printf("\t-c cell_id for input file [Default %d]\n", args.file_cell_id);
   printf("\t-C Enable cell search, default disable, \n");
   printf("\t-C Disable CFO correction [Default %s]\n", args.disable_cfo ? "Disabled" : "Enabled");
@@ -107,7 +115,7 @@ void ArgManager::usage(Args& args, const std::string& prog) {
 void ArgManager::parseArgs(Args& args, int argc, char **argv) {
   int opt;
   defaultArgs(args);
-  while ((opt = getopt(argc, argv, "aAcCDdEfghHilLnpPrRsStTvwWyYqFIuUmOoz")) != -1) {
+  while ((opt = getopt(argc, argv, "aAcCDdEfGghHijlJLnpPQrRsStTvwWyYqFIuUmOoz")) != -1) {
     switch (opt) {
       case 'a':
         args.rf_args = argv[optind];
@@ -118,6 +126,9 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
       case 'g':
         args.rf_gain = strtod(argv[optind], nullptr);
         break;
+      case 'G':
+        args.dl_dci_min_snr_db = strtod(argv[optind], nullptr);
+        break;
       case 'L':
         args.enable_shortcut_discovery = false;
         break;
@@ -126,6 +137,12 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
         break;
       case 'i':
         args.input_file_name = argv[optind];
+        break;
+      case 'j':
+        args.input_file_raw_sync = true;
+        break;
+      case 'J':
+        args.input_file_raw_sc16 = true;
         break;
       case 'I':
         args.cell_id = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
@@ -153,6 +170,9 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
         break;
       case 'P':
         args.file_nof_ports = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
+        break;
+      case 'Q':
+        args.raw_iq_output_file = argv[optind];
         break;
       case 'c':
         args.file_cell_id = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));

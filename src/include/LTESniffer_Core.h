@@ -34,8 +34,10 @@
 #include "Phy.h"
 #include "PcapWriter.h"
 #include "HARQ.h"
+#include <cstdio>
 #include <ctime>
 #include <iostream>
+#include <atomic>
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
 #include "srsue/hdr/ue.h"
@@ -73,6 +75,37 @@ typedef struct {
 
 } UL_Sniffer_ta_buffer_t;
 
+typedef struct {
+  FILE*        file;
+  bool         eof;
+  bool         wrap;
+  uint64_t     samples_read;
+  bool         input_is_sc16;
+  int16_t*     sc16_buffer;
+  uint32_t     sc16_capacity_samples;
+  bool         apply_cfo;
+  float        cfo_freq;
+  srsran_cfo_t cfo_correct;
+} raw_iq_file_source_t;
+
+typedef struct {
+  srsran_rf_t*            rf;
+  srsran_filesink_t*      raw_sink;
+  uint32_t                nof_channels;
+  bool                    write_failed;
+  double                  rx_srate;
+  bool                    have_last_rx_ts;
+  uint64_t                last_rx_ts_samples;
+  uint32_t                last_rx_nsamples;
+  std::atomic<uint64_t>   overflow_count;
+  std::atomic<uint64_t>   late_rx_count;
+  std::atomic<uint64_t>   rx_error_count;
+  std::atomic<uint64_t>   other_error_count;
+  uint64_t                timestamp_gap_events;
+  int64_t                 timestamp_gap_samples_accum;
+  int64_t                 timestamp_gap_samples_max_abs;
+} rf_live_source_t;
+
 static SRSRAN_AGC_CALLBACK(srsran_rf_set_rx_gain_th_wrapper_)
 {
   srsran_rf_set_rx_gain_th((srsran_rf_t*)h, gain_db);
@@ -82,6 +115,8 @@ int srsran_rf_recv_wrapper( void* h,
                             cf_t* data_[SRSRAN_MAX_PORTS], 
                             uint32_t nsamples, 
                             srsran_timestamp_t* t);
+void srsran_rf_error_handler_wrapper(void* arg, srsran_rf_error_t error);
+int raw_iq_file_recv_wrapper(void* h, cf_t* data_[SRSRAN_MAX_PORTS], uint32_t nsamples, srsran_timestamp_t* t);
 
 class LTESniffer_Core : public SignalHandler {
 public:

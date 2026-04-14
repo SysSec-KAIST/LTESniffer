@@ -534,7 +534,8 @@ DCISearch::DCISearch(falcon_ue_dl_t& falcon_ue_dl,
                      uint32_t sf_idx,
                      uint32_t sfn,
                      srsran_dl_sf_cfg_t *sf,
-                     srsran_ue_dl_cfg_t *ue_dl_cfg) :
+                     srsran_ue_dl_cfg_t *ue_dl_cfg,
+                     double min_snr_db) :
   falcon_ue_dl(falcon_ue_dl),
   metaFormats(metaFormats),
   rntiManager(rntiManager),
@@ -542,6 +543,7 @@ DCISearch::DCISearch(falcon_ue_dl_t& falcon_ue_dl,
   subframePower(subframeInfo.getSubframePower()),
   sf_idx(sf_idx),
   sfn(sfn),
+  min_snr_db(min_snr_db),
   stats(),
   enableShortcutDiscovery(true),
   sf(sf),
@@ -566,7 +568,7 @@ int DCISearch::search() {
     dciCollection.setSubframe(sfn, sf_idx, sf->cfi);
   }
   float snr_db = falcon_ue_dl.q->chest_res.snr_db;
-  if (snr_db > 6.0){
+  if (snr_db > min_snr_db){
     //PrintLifetime lt(test_string + "DCI Blind Search: ");
     temp_dci0.clear();
     recursive_blind_dci_search(&dci_msg, sf->cfi);

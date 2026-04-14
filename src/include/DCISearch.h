@@ -24,7 +24,8 @@ public:
               uint32_t sf_idx,
               uint32_t sfn,
               srsran_dl_sf_cfg_t *sf,
-              srsran_ue_dl_cfg_t *ue_dl_cfg);
+              srsran_ue_dl_cfg_t *ue_dl_cfg,
+              double min_snr_db);
 
     int search();
     DCIBlindSearchStats& getStats();
@@ -57,6 +58,7 @@ private:
     SubframePower& subframePower;
     uint32_t sf_idx;
     uint32_t sfn;
+    double min_snr_db;
     DCIBlindSearchStats stats;
     bool enableShortcutDiscovery;
     std::vector<ltesniffer_accepted_dci_t> temp_dci0;

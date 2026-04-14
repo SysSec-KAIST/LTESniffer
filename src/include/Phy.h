@@ -33,7 +33,8 @@ public:
       HARQ *harq,
       int mcs_tracking_mode,
       int harq_mode,
-      ULSchedule *ulsche);
+      ULSchedule *ulsche,
+      double dl_dci_min_snr_db);
   ~Phy();
   std::shared_ptr<SubframeWorker> getAvail();
   std::shared_ptr<SubframeWorker> getAvailImmediate();

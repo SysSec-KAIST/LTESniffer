@@ -120,6 +120,34 @@ cd build
 cmake ../
 make -j 4 (use 4 threads)
 ```
+
+### Build this PR branch from scratch
+
+This repository also has a PR branch with raw IQ replay/capture support:
+
+```bash
+git clone --branch LTESniffer-pr-raw-io https://github.com/vk5zsn/LTESniffer.git
+cd LTESniffer
+git rev-parse --short HEAD
+```
+
+The tested clean-build commit is:
+
+```bash
+1925243
+```
+
+On aarch64 systems such as Raspberry Pi 5, this branch includes the fix for the old `no SIMD instructions found` configure failure. It also applies the required vendored `srsRAN` build patches automatically during configure on a fresh clone.
+
+Build commands:
+
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . --target LTESniffer -j4
+```
+
 ## Usage
 LTESniffer has 3 main functions: 
 - Sniffing LTE downlink traffic from the base station
@@ -190,6 +218,40 @@ sudo ./<build-dir>/src/LTESniffer -A 2 -W <number of threads> -f <DL Freq> -u <U
 example: sudo ./src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -I 379 -p 100 -m 1
 ```
 The debug mode can be enabled by using option ``-d``. In this case, the debug messages will be printed on the terminal.
+
+### Raw IQ replay and capture
+
+The `LTESniffer-pr-raw-io` branch adds:
+
+- `-Q` live raw IQ capture to `cf32`
+- `-j` generic raw IQ replay with synchronization
+- `-J` raw replay input is interleaved `sc16`
+- `-G` minimum DL DCI search SNR for offline replay
+
+Verified live capture example:
+
+```bash
+./<build-dir>/src/LTESniffer -A 1 -W 4 -f 763e6 -C -m 0 -a "num_recv_frames=512" -n 500 -Q iq_763M_cf32.bin
+```
+
+Verified raw replay example:
+
+```bash
+./<build-dir>/src/LTESniffer -i iq_763M_cf32.bin -j -c 405 -p 50 -A 1 -W 4 -m 0 -n 500
+```
+
+For raw replay, provide:
+
+- `-c <PCI>`
+- `-p <PRB>`
+
+Verified Gqrx raw `fc32` replay example at `11.52 Msps`:
+
+```bash
+./<build-dir>/src/LTESniffer -i gqrx_20260413_233101_763000000_11520000_fc.raw -j -c 405 -p 50 -A 1 -W 4 -m 0 -n 500
+```
+
+If the raw file is interleaved `sc16`, add `-J`.
 
 ### Output of LTESniffer
 

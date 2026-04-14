@@ -14,6 +14,8 @@ struct Args {
   uint32_t    time_offset;
   int         force_N_id_2;
   std::string input_file_name = "";
+  bool        input_file_raw_sync = false;
+  bool        input_file_raw_sc16 = false;
   std::string dci_file_name = "";
   std::string stats_file_name = "";
   int         file_offset_time;
@@ -23,6 +25,7 @@ struct Args {
   uint32_t    file_nof_ports;
   uint32_t    file_cell_id;
   bool        file_wrap;
+  std::string raw_iq_output_file = "";
   std::string rf_args;
   uint32_t    rf_nof_rx_ant;
   double      rf_freq;
@@ -48,6 +51,7 @@ struct Args {
   char*       rf_dev;
   //char* rf_args;
   int         enable_cfo_ref;
+  double      dl_dci_min_snr_db;
   std::string estimator_alg;
   bool        cell_search = false;
   uint16_t    target_rnti = 0;

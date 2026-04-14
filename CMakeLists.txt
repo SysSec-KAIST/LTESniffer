@@ -181,6 +181,11 @@ else(SRSRAN_FOUND AND NOT FORCE_SUBPROJECT_SRSRAN)
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-download" )
   execute_process(COMMAND "${CMAKE_COMMAND}" --build .
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/srsRAN-download" )
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -DSRSRAN_SRC_DIR=${CMAKE_BINARY_DIR}/srsRAN-src
+            -P "${CMAKE_SOURCE_DIR}/external/cmake/PatchDownloadedSrsran.cmake"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
 
   include_directories("${CMAKE_BINARY_DIR}/srsRAN-build/lib/include")
   include_directories("${CMAKE_BINARY_DIR}/srsRAN-src/lib/include")
@@ -318,14 +323,14 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif(HAVE_SSE)
   endif(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
-  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-
-    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mfpu=neon -march=native -DIS_ARM -DHAVE_NEON")
+  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(arm|aarch64)")
+    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -march=native -DIS_ARM -DHAVE_NEON")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -DIS_ARM -DHAVE_NEON")
     message(STATUS "have ARM")
     set(HAVE_NEON "True")
-  else(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  else(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(arm|aarch64)")
     set(HAVE_NEON "False")
-  endif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  endif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(arm|aarch64)")
   set(CMAKE_REQUIRED_FLAGS ${CMAKE_C_FLAGS})
 
   if(NOT HAVE_SSE AND NOT HAVE_NEON AND NOT DISABLE_SIMD)

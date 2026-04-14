@@ -25,7 +25,8 @@ public:
                  int mcs_tracking_mode, 
                  int harq_mode,
                  ULSchedule *ulsche, 
-                 int sniffer_mode);
+                 int sniffer_mode,
+                 double dl_dci_min_snr_db);
   ~SubframeWorker();
 
   bool                  setCell(srsran_cell_t cell);
@@ -69,6 +70,7 @@ private:
   int                   mcs_tracking_mode;
   MCSTracking           *mcs_tracking;
   int                   harq_mode;
+  double                dl_dci_min_snr_db;
   HARQ                  *harq;
 
   //uplink

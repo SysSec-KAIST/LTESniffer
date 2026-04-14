@@ -18,7 +18,8 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                int mcs_tracking_mode,
                                int harq_mode,
                                ULSchedule *ulsche,
-                               int sniffer_mode) : sfb(common.nof_rx_antennas),
+                               int sniffer_mode,
+                               double dl_dci_min_snr_db) : sfb(common.nof_rx_antennas),
                                                    idx(idx),
                                                    max_prb(max_prb),
                                                    common(common),
@@ -29,6 +30,7 @@ SubframeWorker::SubframeWorker(uint32_t idx,
                                                    stats(),
                                                    pcapwriter(pcapwriter),
                                                    mcs_tracking(mcs_tracking),
+                                                   dl_dci_min_snr_db(dl_dci_min_snr_db),
                                                    harq(harq),
                                                    harq_mode(harq_mode),
                                                    mcs_tracking_mode(mcs_tracking_mode),
@@ -161,7 +163,8 @@ void SubframeWorker::work()
                       common.getRNTIManager(),
                       subframeInfo,
                       sf_idx, sfn,
-                      &dl_sf, &ue_dl_cfg);
+                      &dl_sf, &ue_dl_cfg,
+                      dl_dci_min_snr_db);
   dciSearch.setShortcutDiscovery(common.getShortcutDiscovery());
 
   int snr_ret = SRSRAN_SUCCESS;
