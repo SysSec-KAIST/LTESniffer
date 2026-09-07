@@ -8,6 +8,8 @@ LTESniffer is a real-time LTE downlink/uplink eavesdropper (C/C++), built on top
 
 This is research/lab tooling for passive LTE analysis with SDR hardware (USRP via UHD, BladeRF, or SoapySDR-supported devices). The core downlink/uplink sniffer lives on `main`; uplink-with-2×USRP-B210 and IQ-recording features live on the `LTESniffer-multi-usrp` and `LTESniffer-record-subframe` branches respectively.
 
+Target OS: Ubuntu 18.04/20.04/22.04. `main` uplink mode needs a single USRP X310 (two LOs, one per RX channel); GPSDO is optional there but mandatory on the `LTESniffer-multi-usrp` branch's dual-B210 setup for clock/time-reference sync.
+
 ## Build
 
 ```bash
