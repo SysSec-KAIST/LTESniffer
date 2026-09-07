@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LTESniffer is a real-time LTE downlink/uplink eavesdropper (C/C++), built on top of the FALCON library (`lib/`) and the srsRAN LTE PHY/stack (external dependency, pulled in via CMake). It decodes PDCCH to obtain DCIs/RNTIs, then uses those to decode PDSCH (downlink) and PUSCH (uplink), writing decoded MAC-LTE traffic to pcap files for analysis in Wireshark. It also exposes a security-research API (RNTI-TMSI mapping, IMSI collection, UE capability profiling).
 
-This is research/lab tooling for passive LTE analysis with SDR hardware (USRP via UHD, BladeRF, or SoapySDR-supported devices). Only the `main` branch is checked out locally; uplink-with-2×USRP-B210 and IQ-recording features live on the `LTESniffer-multi-usrp` and `LTESniffer-record-subframe` branches respectively (not present in this checkout).
+This is research/lab tooling for passive LTE analysis with SDR hardware (USRP via UHD, BladeRF, or SoapySDR-supported devices). The core downlink/uplink sniffer lives on `main`; uplink-with-2×USRP-B210 and IQ-recording features live on the `LTESniffer-multi-usrp` and `LTESniffer-record-subframe` branches respectively.
 
 ## Build
 
@@ -43,7 +43,7 @@ sudo ./build/src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 1
 sudo ./build/src/LTESniffer -A 2 -W 4 -f 1840e6 -u 1745e6 -C -m 1 -z 3
 ```
 
-Key flags: `-A` antennas, `-W` worker threads, `-f`/`-u` DL/UL frequency, `-C` enable cell search (omit and use `-I <PCI> -p <PRB>` to attach to a known cell directly), `-m` mode (0=DL, 1=UL), `-z` security API level, `-d` debug logging. USRP B210 downlink runs typically need `-a "num_recv_frames=512"` for buffering. Output pcaps (`sniffer_dl_mode.pcap`, `sniffer_ul_mode.pcap`, `api_collector.pcap`) land in the current working directory — decode with the MAC-LTE Wireshark dissector per `pcap_file_example/README.md`.
+Key flags: `-A` antennas, `-W` worker threads, `-f`/`-u` DL/UL frequency, `-C` enable cell search (omit and use `-I <PCI> -p <PRB>` to attach to a known cell directly), `-m` mode (0=DL, 1=UL), `-z` security API level (0=identity mapping, 1=UE capability, 2=IMSI, 3=all), `-d` debug logging. USRP B210 downlink runs typically need `-a "num_recv_frames=512"` for buffering. Output pcaps (`ltesniffer_dl_mode.pcap`, `ltesniffer_ul_mode.pcap`, `api_collector.pcap`) land in the current working directory — decode with the MAC-LTE Wireshark dissector per `pcap_file_example/README.md`.
 
 Helper scripts in `src/`: `set-cpu-governor.sh` and `performance-mode.sh` pin CPU governor for real-time decoding; `allow-realtime.sh` grants realtime scheduling capabilities; `Loop-FalconEye.sh` / `Settings-Loop-FalconEye.sh` are batch-run wrappers.
 

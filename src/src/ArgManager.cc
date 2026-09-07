@@ -100,7 +100,7 @@ void ArgManager::usage(Args& args, const std::string& prog) {
   printf("\t-u Uplink Frequency  \n");
   printf("\t-A Number of RX antennas [Default %d]\n", args.rf_nof_rx_ant);
   printf("\t-m Sniffer mode, 0 for downlink sniffing mode, 1 for uplink sniffing mode\n");
-  printf("\t-z API mode, 0 for identity mapping, 1 for IMSI collecting, 2 for UECapability profiling, 3 for all\n");
+  printf("\t-z API mode, 0 for identity mapping, 1 for UECapability profiling, 2 for IMSI collecting, 3 for all\n");
   printf("\t-d Enable debug mode, print debug message to screen (Defautl disable)\n");
 }
 
