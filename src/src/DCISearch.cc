@@ -569,8 +569,7 @@ int DCISearch::search() {
   if (en_debug && (stats.nof_subframes % 500) == 0) { // periodic SNR sample for antenna-port A/B comparison
     fprintf(stderr, "[SNR] sfn=%d sf_idx=%d snr_db=%.2f\n", sfn, sf_idx, snr_db);
   }
-  if (snr_db > 0.0){ // lowered from 6.0: RNTI cross-validation against normal-confidence decodes
-                      // showed ~75-80% corroboration with no degradation down to 0 dB
+  if (snr_db > 6.0){
     //PrintLifetime lt(test_string + "DCI Blind Search: ");
     temp_dci0.clear();
     recursive_blind_dci_search(&dci_msg, sf->cfi);

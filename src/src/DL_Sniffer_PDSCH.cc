@@ -2,6 +2,17 @@
 
 float p_a_array[8]{-6, -4.77, -3, -1.77, 0, 1, 2, 3};
 
+// A real MAC PDU is never all-zero: even pure padding has a non-zero R/R/E/LCID
+// sub-header. An all-zero "decode" with crc==true is a degenerate result (turbo
+// decoder converging to the zero codeword under marginal SNR, and/or CRC(0)==0
+// for standard polynomials) rather than genuine content.
+static bool is_degenerate_all_zero(const uint8_t *payload, int length) {
+  for (int i = 0; i < length; i++) {
+    if (payload[i] != 0) return false;
+  }
+  return length > 0;
+}
+
 PDSCH_Decoder::PDSCH_Decoder(uint32_t idx,
 							 LTESniffer_pcap_writer *pcapwriter,
 							 MCSTracking *mcs_tracking,
@@ -1031,7 +1042,7 @@ int PDSCH_Decoder::decode_dl_mode()
 						std::string dci_fm = dci_format(cur_format);
 						std::string mod = mod_sche(cur_grant->tb[tb].mod);
 						std::string table_name = decoding_mem.mcs_table ? ("256") : ("64");
-						if (pdsch_res[tb].crc && result_length > 0)
+						if (pdsch_res[tb].crc && result_length > 0 && !is_degenerate_all_zero(pdsch_res[tb].payload, result_length))
 						{
 							write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
 							if (RNTI_name == "RA_RNTI")
@@ -1123,7 +1134,7 @@ int PDSCH_Decoder::decode_dl_mode()
 						int result_length = pdsch_cfg->grant.tb[tb].tbs / 8;
 						std::string dci_fm = dci_format(cur_format);
 						std::string mod = mod_sche(cur_grant->tb[tb].mod);
-						if (pdsch_res[tb].crc && result_length > 0)
+						if (pdsch_res[tb].crc && result_length > 0 && !is_degenerate_all_zero(pdsch_res[tb].payload, result_length))
 						{
 							write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
 							if (RNTI_name == "RA_RNTI")
@@ -1219,7 +1230,7 @@ int PDSCH_Decoder::decode_dl_mode()
 							int result_length = pdsch_cfg->grant.tb[tb].tbs / 8;
 							std::string dci_fm = dci_format(cur_format);
 							std::string mod = mod_sche(cur_grant256->tb[tb].mod);
-							if (pdsch_res[tb].crc && result_length > 0)
+							if (pdsch_res[tb].crc && result_length > 0 && !is_degenerate_all_zero(pdsch_res[tb].payload, result_length))
 							{
 								write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
 								// update mcs table to database when mcs < 28 because 256QAM table:
