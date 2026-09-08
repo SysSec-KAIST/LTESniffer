@@ -507,15 +507,20 @@ bool LTESniffer_Core::run(){
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
         state = DECODE_MIB;
-        if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers()[0], cell.nof_prb)) {
-          ERROR("Error initaiting UE MIB decoder");
-          exit(-1);
+        // A marginal-SNR MIB decode can occasionally corrupt cell.nof_prb (srsRAN
+        // writes the freshly-decoded bandwidth back into this shared cell struct on
+        // every MIB decode). Reinitializing the MIB decoder with an invalid PRB count
+        // would otherwise abort the whole process (exit(-1) from inside the main loop
+        // with worker threads still active - observed as a core dump in practice).
+        // Skip this resync cycle instead and retry on the next one.
+        if (srsran_sampling_freq_hz(cell.nof_prb) == -1) {
+          ERROR("Corrupted cell.nof_prb=%d after a marginal-SNR MIB decode; skipping MIB reinit this cycle", cell.nof_prb);
+        } else if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers()[0], cell.nof_prb) ||
+                   srsran_ue_mib_set_cell(&ue_mib, cell)) {
+          ERROR("Error initiating UE MIB decoder; skipping this resync cycle");
+        } else {
+          srsran_pbch_decode_reset(&ue_mib.pbch);
         }
-        if (srsran_ue_mib_set_cell(&ue_mib, cell)) {
-          ERROR("Error initaiting UE MIB decoder");
-          exit(-1);
-        }
-        srsran_pbch_decode_reset(&ue_mib.pbch);
         nof_lost_sync = 0;
       }
       nof_lost_sync++;
