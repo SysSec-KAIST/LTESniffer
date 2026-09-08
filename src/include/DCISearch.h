@@ -31,7 +31,9 @@ public:
 
     void setShortcutDiscovery(bool enable);
     bool getShortcutDiscovery() const;
-    
+
+    void setDebugMode(bool enable) { en_debug = enable; }
+
     /*set nof_antenna = 1 as using antenna 0 for downlink, 1 for uplink */
     void prepareDCISearch();
 private:
@@ -59,5 +61,6 @@ private:
     uint32_t sfn;
     DCIBlindSearchStats stats;
     bool enableShortcutDiscovery;
+    bool en_debug = false;
     std::vector<ltesniffer_accepted_dci_t> temp_dci0;
 };

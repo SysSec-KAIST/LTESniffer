@@ -64,7 +64,9 @@ public:
 						srsran_dci_cfg_t*   cfg);
 	static std::vector<uint16_t> applyLegacyColorMap(const std::vector<uint16_t>& RBMap);
 	void set_sniffer_mode(int sniffer_mode_){sniffer_mode = sniffer_mode_;}
+	void set_debug_mode(bool en_debug_){en_debug = en_debug_;}
 private:
+	bool en_debug = false;
 	int sniffer_mode = DL_MODE;
 	srsran_cell_t cell;
 	uint32_t sfn;

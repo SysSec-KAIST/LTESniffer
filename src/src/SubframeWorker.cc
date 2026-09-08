@@ -156,6 +156,7 @@ void SubframeWorker::work()
                             harq_mode,
                             harq,
                             ulsche);
+  subframeInfo.getDCICollection().set_debug_mode(mcs_tracking->get_debug_mode());
   DCISearch dciSearch(falcon_ue_dl,
                       metaFormats,
                       common.getRNTIManager(),
@@ -163,6 +164,7 @@ void SubframeWorker::work()
                       sf_idx, sfn,
                       &dl_sf, &ue_dl_cfg);
   dciSearch.setShortcutDiscovery(common.getShortcutDiscovery());
+  dciSearch.setDebugMode(mcs_tracking->get_debug_mode());
 
   int snr_ret = SRSRAN_SUCCESS;
 

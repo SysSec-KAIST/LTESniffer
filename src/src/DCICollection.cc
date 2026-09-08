@@ -258,6 +258,17 @@ void DCICollection::addCandidate(dci_candidate_t& cand,
       }
     }
     
+    // Per-DCI census log: RNTI+TBS+direction+timing, no payload decode needed.
+    // Feature set matches Baek et al. (DSN'23) "Targeted Privacy Attacks by
+    // Fingerprinting Mobile Apps in LTE Radio Layer": interarrival time, frame
+    // size (TBS), direction, RNTI - sufficient for device activity census /
+    // app-type classification without crossing the full-payload SNR threshold.
+    if (en_debug) {
+      fprintf(stderr, "[DCILOG] sfn=%d sf_idx=%d dir=DL rnti=%d format=%d tbs=%d\n",
+              sfn, sf_idx, dci_dl->rnti, (int)dci_dl->format,
+              ran_dci_dl->ran_pdsch_grant->tb[0].enabled ? ran_dci_dl->ran_pdsch_grant->tb[0].tbs : 0);
+    }
+
     dci_dl_collection.push_back(std::move(*dci_dl));
     ran_dl_collection.push_back(std::move(*ran_dci_dl));
   }
